@@ -1,38 +1,83 @@
-# Google Apps Script (GAS) 連携セットアップガイド
+# Google Apps Script (GAS) 連携セットアップガイド（GET/POST両対応版）
 
-本ガイドでは、GitHub Pagesでホストしたランディングページ（LP）の登録フォームから、Google スプレッドシートへ自動でデータを保存し、登録完了メールを送信する仕組み（バックエンドAPI）の構築手順を説明します。
+本ガイドでは、GitHub PagesのLPに新設した「交流スペース（掲示板）」の機能を実現するために、メッセージの取得（GET）および投稿・会員登録（POST）の両方に対応した最新のGASバックエンドを構築する手順を説明します。
 
 ---
 
 ## 🛠️ ステップ 1：Google スプレッドシートの準備
 
-1. **Google ドライブ**にアクセスし、新規の **Google スプレッドシート** を作成します。
-2. シートのタイトルを任意のもの（例：「会員募集応募者リスト」）に変更します。
-3. シートの1行目に、左から順番に以下の見出しを入力します。
-   - A列: `タイムスタンプ`
-   - B列: `お名前`
-   - C列: `メールアドレス`
+1. 以前作成した、あるいは新規の **Google スプレッドシート** を開きます。
+2. シートの1行目の見出し（ヘッダー）を手動で設定する必要はありません。GASの新しいコードが実行時に、必要なシート（`申し込み` と `掲示板`）を**自動作成**し、自動でヘッダー列を追加します。
 
 ---
 
-## 🛠️ ステップ 2：Google Apps Script (GAS) の設定
+## 🛠️ ステップ 2：最新の GAS コードの貼り付け
 
 1. スプレッドシートのメニューバーから、**「拡張機能」＞「Apps Script」** をクリックします。
-2. エディタが起動したら、最初から表示されている `myFunction` のコードをすべて消去します。
-3. 以下のコードをコピーして貼り付けます。
+2. エディタに記述されている既存のコードをすべて消去します。
+3. 以下の統合コード（GETおよびPOST分岐対応）をコピーして貼り付けます。
 
 ```javascript
 /**
- * フォームから送信されたデータを受け取って処理するAPI
- * @param {Object} e - POSTリクエストイベントオブジェクト
+ * 掲示板メッセージ一覧の取得 (GETリクエスト)
+ * @param {Object} e - GETリクエストイベントオブジェクト
  */
-function doPost(e) {
-  // CORS対策用のレスポンスヘッダーを持つTextOutputを作成
+function doGet(e) {
   var output = ContentService.createTextOutput();
   output.setMimeType(ContentService.MimeType.JSON);
   
   try {
-    // データの受け取りと解析
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("掲示板");
+    
+    // 「掲示板」シートが存在しない場合は自動で作成
+    if (!sheet) {
+      sheet = ss.insertSheet("掲示板");
+      sheet.appendRow(["タイムスタンプ", "ニックネーム", "趣味ジャンル", "一言コメント"]);
+    }
+    
+    var data = [];
+    var lastRow = sheet.getLastRow();
+    
+    if (lastRow > 1) {
+      // 2行目以降の全データを取得
+      var rows = sheet.getRange(2, 1, lastRow - 1, 4).getValues();
+      
+      // 最新の投稿が上に表示されるように、逆順で最大50件分配列に追加
+      var start = Math.max(0, rows.length - 50);
+      for (var i = rows.length - 1; i >= start; i--) {
+        data.push({
+          timestamp: rows[i][0],
+          nickname: rows[i][1],
+          category: rows[i][2],
+          comment: rows[i][3]
+        });
+      }
+    }
+    
+    // CORSエラー回避のため、JSONとして返却
+    return output.setContent(JSON.stringify({
+      status: "success",
+      data: data
+    }));
+    
+  } catch (error) {
+    return output.setContent(JSON.stringify({
+      status: "error",
+      message: error.toString()
+    }));
+  }
+}
+
+/**
+ * データの書き込み (POSTリクエスト)
+ * @param {Object} e - POSTリクエストイベントオブジェクト
+ */
+function doPost(e) {
+  var output = ContentService.createTextOutput();
+  output.setMimeType(ContentService.MimeType.JSON);
+  
+  try {
     var params;
     if (e.postData && e.postData.contents) {
       params = JSON.parse(e.postData.contents);
@@ -40,46 +85,57 @@ function doPost(e) {
       throw new Error("送信データが空です。");
     }
 
-    var name = params.name;
-    var email = params.email;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // バリデーション
-    if (!name || !email) {
-      throw new Error("お名前、またはメールアドレスが入力されていません。");
+    // 処理の分岐 (掲示板のメッセージ投稿)
+    if (params.action === "postMessage") {
+      var sheet = ss.getSheetByName("掲示板");
+      if (!sheet) {
+        sheet = ss.insertSheet("掲示板");
+        sheet.appendRow(["タイムスタンプ", "ニックネーム", "趣味ジャンル", "一言コメント"]);
+      }
+      
+      var nickname = params.nickname;
+      var hobbyCategory = params.hobbyCategory;
+      var comment = params.comment;
+      
+      if (!nickname || !hobbyCategory || !comment) {
+        throw new Error("入力項目が不足しています。");
+      }
+      
+      // データの追加
+      sheet.appendRow([new Date(), nickname, hobbyCategory, comment]);
+      
+      return output.setContent(JSON.stringify({ 
+        status: "success", 
+        message: "メッセージが投稿されました。" 
+      }));
+      
+    } else {
+      // 処理の分岐 (メンバーシップ申し込み登録)
+      var sheet = ss.getSheetByName("申し込み");
+      if (!sheet) {
+        sheet = ss.insertSheet("申し込み");
+        sheet.appendRow(["タイムスタンプ", "お名前", "メールアドレス"]);
+      }
+      
+      var name = params.name;
+      var email = params.email;
+      
+      if (!name || !email) {
+        throw new Error("お名前、またはメールアドレスが入力されていません。");
+      }
+      
+      // データの追加
+      sheet.appendRow([new Date(), name, email]);
+      
+      return output.setContent(JSON.stringify({ 
+        status: "success", 
+        message: "登録が正常に完了しました。" 
+      }));
     }
     
-    // アクティブなスプレッドシートの最初のシートにデータを追記
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    var timestamp = new Date();
-    sheet.appendRow([timestamp, name, email]);
-    
-    // 【オプション】自動返信メールの送信
-    // 必要に応じて以下のコメントアウトを解除し、件名や本文を調整してください。
-    /*
-    MailApp.sendEmail({
-      to: email,
-      subject: "【ご入会】会員登録お申し込みありがとうございます",
-      body: name + " 様\n\n" +
-            "この度はご登録いただき、誠にありがとうございます。\n" +
-            "お申し込みを以下の内容で受け付けました。\n\n" +
-            "----------------------------\n" +
-            "■ お名前: " + name + "\n" +
-            "■ メールアドレス: " + email + "\n" +
-            "----------------------------\n\n" +
-            "今後の詳細なご案内は、本メールアドレス宛てにお送りいたします。\n" +
-            "引き続きよろしくお願いいたします。\n\n" +
-            "コミュニティ運営事務局"
-    });
-    */
-    
-    // 成功レスポンス
-    return output.setContent(JSON.stringify({ 
-      status: "success", 
-      message: "登録が正常に完了しました。" 
-    }));
-    
   } catch (error) {
-    // エラーレスポンス
     return output.setContent(JSON.stringify({ 
       status: "error", 
       message: error.toString() 
@@ -101,44 +157,13 @@ function doOptions(e) {
 
 ---
 
-## 🛠️ ステップ 3：Webアプリとしてデプロイ
+## 🛠️ ステップ 3：新しいデプロイとして公開
 
-1. 画面右上の **「デプロイ」＞「新しいデプロイ」** をクリックします。
-2. ギアマーク（種類の選択）をクリックし、**「ウェブアプリ」** を選択します。
-3. 以下の設定を行います。
-   - **説明:** `会員募集LP連携API`（任意）
-   - **次のユーザーとして実行:** `自分 (あなたのGoogleアカウント)`
-   - **アクセスできるユーザー:** `全員` (※重要: 「全員」にしないとGitHub Pages側からデータを送信できません)
+GASのコードを更新（`doGet`の追加など）した後は、**既存のデプロイを更新するか、新しいデプロイを作成する**必要があります。デプロイを更新しないと、古いバージョンのコード（申し込み登録のみ）が実行され続けてしまいます。
+
+1. 画面右上の **「デプロイ」＞「デプロイの管理」** をクリックします。
+2. 鉛筆マーク（編集）をクリックします。
+3. **バージョン** のドロップダウンメニューから **「新バージョン」** を選択します。
 4. **「デプロイ」** をクリックします。
-5. 初回デプロイ時は、アクセス権限の承認を求められます。
-   - **「アクセスの承認」** ボタンをクリックします。
-   - 自分のGoogleアカウントを選択します。
-   - 「このアプリは Google で確認されていません」という警告が出た場合は、左下の **「詳細」** をクリックし、一番下の **「xxxx（安全ではないページ）に移動」** をクリックします。
-   - 権限を確認し、**「許可」** をクリックします。
-6. デプロイ完了画面に表示される **「ウェブアプリのURL」** をコピーします。
-   - URLの形式：`https://script.google.com/macros/s/XXXXXX/exec`
-
----
-
-## 🛠️ ステップ 4：LPコード（HTML）へのURL設定
-
-1. 本プロジェクトの `index.html` を開きます。
-2. 75行目付近にある `const GAS_WEB_APP_URL = "ここにコピーしたGASのウェブアプリURLを貼り付け";` を探します。
-3. `ここにコピーしたGASのウェブアプリURLを貼り付け` の部分を、**ステップ3でコピーしたURL**に書き換えます。
-
-例：
-```javascript
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycb.../exec";
-```
-
-4. ファイルを保存し、GitHubリポジトリへプッシュ（またはアップロード）します。
-
----
-
-## 🔍 テストと確認方法
-
-1. 公開された GitHub Pages もしくはローカルで起動した `index.html` にアクセスします。
-2. フォームに「テスト 太郎」などの名前と、自身のメールアドレスを入力して「送信」をクリックします。
-3. 送信ボタンが「送信中...」となり、その後「お申し込みを受け付けました！登録ありがとうございます。」という緑色のメッセージが表示されることを確認します。
-4. Google スプレッドシートを開き、送信したデータ（タイムスタンプ、名前、メールアドレス）が即座に追加されていることを確認します。
-5. （メール通知を有効にした場合）入力したメールアドレス宛てに自動返信メールが届いていることを確認します。
+5. 更新された「ウェブアプリのURL」をコピーし、念のためLP（`index.html`のGAS_WEB_APP_URL変数）と一致しているか確認します。
+   - URLが変更されている場合は、`index.html` の75行目の定数を新しいURLに書き換えて、GitHubにコミット＆プッシュしてください。

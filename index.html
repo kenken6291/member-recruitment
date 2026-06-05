@@ -16,74 +16,165 @@
     <div class="badge">New Community / 新規コミュニティ</div>
     <h1>60代はやりたい放題</h1>
     <h2 class="hero-en-title">Wild at 60s</h2>
+    
+    <!-- テスト警告バナー -->
     <div class="test-warning-banner">
       <span class="warning-tag">⚠️ テストページ / TEST PAGE</span>
-      <p class="warning-text">※これはテストページです。登録しないでください。</p>
-      <p class="warning-text en-text">※This is a test page. Please do NOT register.</p>
+      <p class="warning-text">※これはテストページです。登録・投稿はしないでください。</p>
+      <p class="warning-text en-text">※This is a test page. Please do NOT register or post.</p>
     </div>
     
-    <p class="hero-desc">
-      60代を迎えた今こそ、本当にやりたかったことに挑戦し、自分らしく自由に楽しむ時です。
-    </p>
-    <p class="hero-desc en-text">
-      Now in your 60s, it's time to take on new challenges and enjoy yourself with ultimate freedom.
-    </p>
+    <!-- コンセプト紹介文 -->
+    <div class="concept-container">
+      <p class="hero-desc">
+        趣味をお互いに紹介し合い、交流を拡げたい方を募集します！タイトルは「60代はやりたい放題」としていますが、年齢・性別は一切問いません。学生から80代の方まで、幅広い世代が繋がれる交流の場を目指しています。
+      </p>
+      <p class="hero-desc en-text">
+        We are recruiting people who want to introduce their hobbies and expand their network! Although the title is "Wild at 60s," age and gender do not matter at all. We aim to create a community where a wide range of generations, from students to people in their 80s, can connect.
+      </p>
+    </div>
     
-    <a href="#join-form" class="hero-btn" id="heroCtaBtn">今すぐ申し込む / Apply Now</a>
+    <div class="hero-cta-group">
+      <a href="#join-form" class="hero-btn" id="heroCtaBtn">メンバーに申し込む / Apply Now</a>
+      <a href="#message-board" class="hero-btn secondary" id="heroMsgBtn">交流スペースを見る / View Board</a>
+    </div>
     
-    <!-- 生成したヒーロー画像を表示 -->
+    <!-- ヒーロー画像 -->
     <div class="hero-image-container">
       <img src="hero_community.png" class="hero-image" alt="コラボレーションするコミュニティメンバーのイメージイラスト" id="heroImage">
     </div>
   </header>
 
-  <!-- 特徴・ポイントセクション -->
   <main>
-    <section class="features-section" id="features">
+    <!-- 趣味の事例セクション -->
+    <section class="hobbies-section" id="hobbies">
       <h2 class="section-title">
-        選ばれる3つのポイント
-        <span class="section-en-title">3 Key Benefits</span>
+        趣味の事例紹介
+        <span class="section-en-title">Hobby Showcases</span>
       </h2>
+      <p class="section-subtitle">コミュニティで楽しまれている活動の例です。</p>
+      <p class="section-subtitle en-text">Examples of activities enjoyed in our community.</p>
       
-      <div class="features-grid">
-        <article class="feature-card">
-          <div class="feature-num" aria-hidden="true">1</div>
-          <h3>
-            心地よいサードプレイス
-            <span class="en-sub-title">A Comfortable Third Place</span>
-          </h3>
-          <p class="card-jp-desc">日常から少し離れて、年齢や肩書に関係なくフラットに楽しめる居心地の良い空間を提供します。自分らしさを表現できる場所です。</p>
-          <p class="en-text">A relaxing space where you can step away from daily life and enjoy networking on flat terms, regardless of age or title.</p>
+      <div class="hobbies-grid">
+        <!-- 卓球 -->
+        <article class="hobby-card">
+          <div class="hobby-img-wrapper">
+            <img src="hobby_table_tennis.png" alt="卓球 / Table Tennis" loading="lazy">
+          </div>
+          <div class="hobby-info">
+            <h3>卓球 <span class="en-sub-title">Table Tennis</span></h3>
+            <p class="card-jp-desc">適度な運動と爽快感！躍動感あふれるピンポンゲームで、年齢に関係なく白熱したラリーを楽しんでいます。</p>
+            <p class="en-text">Moderate exercise and pure excitement! Enjoying energetic rallies and friendly table tennis matches across all ages.</p>
+          </div>
         </article>
         
-        <article class="feature-card">
-          <div class="feature-num" aria-hidden="true">2</div>
-          <h3>
-            多彩なアクティビティ
-            <span class="en-sub-title">Various Activities</span>
-          </h3>
-          <p class="card-jp-desc">定期的なオンライン・オフラインイベントや、お互いの知見・興味を深め合える勉強会やワークショップを毎月企画しています。</p>
-          <p class="en-text">Monthly online and offline meetups, study sessions, and workshops to help you deepen your knowledge and share interests.</p>
+        <!-- ダンス -->
+        <article class="hobby-card">
+          <div class="hobby-img-wrapper">
+            <img src="hobby_dance.png" alt="ダンス / Dance" loading="lazy">
+          </div>
+          <div class="hobby-info">
+            <h3>ダンス <span class="en-sub-title">Dance</span></h3>
+            <p class="card-jp-desc">サルサ、リンディホップ、社交ダンスなど。音楽に合わせて体を動かし、笑顔あふれる楽しい時間を共有します。</p>
+            <p class="en-text">Salsa, Lindy Hop, ballroom dancing, and more. Move to the music and share joyful moments filled with smiles.</p>
+          </div>
         </article>
         
-        <article class="feature-card">
-          <div class="feature-num" aria-hidden="true">3</div>
-          <h3>
-            初心者でも安心
-            <span class="en-sub-title">Safe for Beginners</span>
-          </h3>
-          <p class="card-jp-desc">新メンバーが馴染みやすいよう、既存メンバーや運営によるサポート体制が整っているため、初めてコミュニティに参加する方も安心です。</p>
-          <p class="en-text">With a supportive system designed to welcome new members, anyone joining a community for the first time can feel at ease.</p>
+        <!-- 自転車 -->
+        <article class="hobby-card">
+          <div class="hobby-img-wrapper">
+            <img src="hobby_bicycle.png" alt="自転車 / Cycling" loading="lazy">
+          </div>
+          <div class="hobby-info">
+            <h3>自転車 <span class="en-sub-title">Cycling & Outdoors</span></h3>
+            <p class="card-jp-desc">自転車キャンプや週末のサイクリング。爽やかな風を感じながら、自然豊かなルートを仲間と一緒に走ります。</p>
+            <p class="en-text">Bicycle camping and weekend touring. Feel the refreshing breeze and ride through scenic nature routes together.</p>
+          </div>
+        </article>
+        
+        <!-- キャンピングカー -->
+        <article class="hobby-card">
+          <div class="hobby-img-wrapper">
+            <img src="hobby_camper.png" alt="キャンピングカー / Camper Van" loading="lazy">
+          </div>
+          <div class="hobby-info">
+            <h3>キャンピングカー <span class="en-sub-title">Camper Van Travels</span></h3>
+            <p class="card-jp-desc">車中泊や気ままな一人旅。自分だけの快適な空間で、自由きままに日本中を旅するライフスタイルです。</p>
+            <p class="en-text">Road trips and camper van life. Experience ultimate freedom, traveling anywhere with your custom, cozy mobile home.</p>
+          </div>
+        </article>
+        
+        <!-- プログラミング -->
+        <article class="hobby-card">
+          <div class="hobby-info">
+            <h3>プログラミング <span class="en-sub-title">Programming & Gaming</span></h3>
+            <p class="card-jp-desc">ゲーム開発やアプリ作成。いくつになっても新しい技術を学び、パソコンに向かってクリエイティブなものづくりに没頭します。</p>
+            <p class="en-text">Game development and app coding. Never stop learning new tech, dive into creative creation on computers.</p>
+          </div>
+          <div class="hobby-img-wrapper">
+            <img src="hobby_programming.png" alt="プログラミング / Programming" loading="lazy">
+          </div>
         </article>
       </div>
     </section>
 
-    <!-- フォームセクション -->
+    <!-- 交流スペース（掲示板）セクション -->
+    <section id="message-board" class="board-section">
+      <div class="board-container">
+        <h2>
+          みんなの交流スペース（掲示板）
+          <span class="section-en-title">Community Board</span>
+        </h2>
+        <p class="board-subtitle">趣味や一言コメントを気軽に投稿して交流しましょう！</p>
+        <p class="board-subtitle en-text">Feel free to post your hobbies or leave a comment to connect!</p>
+        
+        <div class="board-layout">
+          <!-- 投稿フォーム -->
+          <div class="post-form-wrapper">
+            <form id="boardForm" novalidate>
+              <div class="form-group">
+                <label for="nickname">ニックネーム <span class="en-label">/ Nickname</span></label>
+                <input type="text" id="nickname" required placeholder="ニックネーム (Nickname)">
+              </div>
+              
+              <div class="form-group">
+                <label for="hobbyCategory">趣味のジャンル <span class="en-label">/ Hobby Genre</span></label>
+                <input type="text" id="hobbyCategory" required placeholder="例: カメラ, ダンス (e.g. Photography)">
+              </div>
+              
+              <div class="form-group">
+                <label for="comment">一言コメント <span class="en-label">/ Comment</span></label>
+                <textarea id="comment" required placeholder="こんにちは！気軽に話しかけてください。(Hello! Feel free to say hi.)" rows="3"></textarea>
+              </div>
+              
+              <button type="submit" id="boardSubmitBtn" class="submit-btn">
+                <span class="spinner" id="boardSpinner" aria-hidden="true"></span>
+                <span id="boardBtnText">投稿する / Post Message</span>
+              </button>
+            </form>
+            <div id="boardResponseMessage" class="message-box" role="alert" aria-live="polite"></div>
+          </div>
+          
+          <!-- メッセージタイムライン -->
+          <div class="timeline-wrapper">
+            <h3>最近の投稿 <span class="en-sub-title">Recent Activity</span></h3>
+            <div id="messageTimeline" class="timeline-list">
+              <div class="loading-state">
+                <span class="loading-spinner"></span>
+                <p>投稿を読み込んでいます... / Loading messages...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 会員登録フォームセクション -->
     <section id="join-form" class="form-section">
       <div class="form-container">
         <h2>
-          会員登録お申し込み
-          <span class="section-en-title">Membership Application</span>
+          メンバー登録お申し込み
+          <span class="section-en-title">Membership Signup</span>
         </h2>
         <div class="form-test-notice">
           <p>【ご注意】これはテスト用フォームです。個人情報は入力しないでください。</p>
@@ -121,6 +212,141 @@
     // ユーザー提供のGASウェブアプリURL
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyh7INjGDMVl18-U-OS8OLnyybrCoGD_Ipkthq9NbycpABHc-zEMad1nahpGixVgP7o/exec";
 
+    // 読み込み完了時にメッセージ一覧を取得
+    document.addEventListener("DOMContentLoaded", loadMessages);
+
+    // ==========================================
+    // 掲示板メッセージの取得 (GET)
+    // ==========================================
+    async function loadMessages() {
+      const timeline = document.getElementById('messageTimeline');
+      
+      try {
+        if (GAS_WEB_APP_URL.includes("ここにコピーしたGAS")) {
+          timeline.innerHTML = `<div class="error-msg">GAS_URLが未設定です。<br><span class="en-text">GAS URL is not configured.</span></div>`;
+          return;
+        }
+
+        // GASへGETリクエストを送信
+        const response = await fetch(GAS_WEB_APP_URL);
+        const result = await response.json();
+        
+        if (result.status === "success") {
+          displayMessages(result.data);
+        } else {
+          timeline.innerHTML = `<div class="error-msg">データの取得に失敗しました。<br><span class="en-text">Failed to retrieve data.</span></div>`;
+        }
+      } catch (error) {
+        console.error("Error loading messages:", error);
+        timeline.innerHTML = `<div class="error-msg">接続エラーが発生しました。 / Connection error.</div>`;
+      }
+    }
+
+    // メッセージのレンダリング
+    function displayMessages(messages) {
+      const timeline = document.getElementById('messageTimeline');
+      
+      if (!messages || messages.length === 0) {
+        timeline.innerHTML = `
+          <div class="empty-state">
+            <p>まだ投稿がありません。最初のメッセージを投稿しましょう！</p>
+            <p class="en-text">No posts yet. Be the first to post a message!</p>
+          </div>`;
+        return;
+      }
+      
+      // タイムラインをクリアしてカードを追加
+      timeline.innerHTML = "";
+      messages.forEach(msg => {
+        const date = new Date(msg.timestamp);
+        const formattedDate = `${date.getFullYear()}/${date.getMonth()+1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        
+        const card = document.createElement('div');
+        card.className = 'message-card';
+        card.innerHTML = `
+          <div class="message-card-header">
+            <span class="message-nickname">${escapeHTML(msg.nickname)}</span>
+            <span class="message-category">${escapeHTML(msg.category)}</span>
+          </div>
+          <p class="message-body">${escapeHTML(msg.comment).replace(/\n/g, '<br>')}</p>
+          <span class="message-time">${formattedDate}</span>
+        `;
+        timeline.appendChild(card);
+      });
+    }
+
+    // ==========================================
+    // 掲示板メッセージの投稿 (POST)
+    // ==========================================
+    document.getElementById('boardForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('boardSubmitBtn');
+      const btnText = document.getElementById('boardBtnText');
+      const btnSpinner = document.getElementById('boardSpinner');
+      const responseMessage = document.getElementById('boardResponseMessage');
+      
+      const nicknameInput = document.getElementById('nickname');
+      const categoryInput = document.getElementById('hobbyCategory');
+      const commentInput = document.getElementById('comment');
+      
+      // バリデーション
+      if (!nicknameInput.value.trim()) {
+        showResponse(responseMessage, "ニックネームを入力してください。 / Please enter nickname.", "error");
+        return;
+      }
+      if (!categoryInput.value.trim()) {
+        showResponse(responseMessage, "趣味を入力してください。 / Please enter hobby genre.", "error");
+        return;
+      }
+      if (!commentInput.value.trim()) {
+        showResponse(responseMessage, "一言コメントを入力してください。 / Please enter a comment.", "error");
+        return;
+      }
+
+      // UI状態更新
+      submitBtn.disabled = true;
+      btnText.textContent = "投稿中... / Posting...";
+      btnSpinner.style.display = "inline-block";
+      responseMessage.className = "message-box"; 
+      
+      const messageData = {
+        action: "postMessage",
+        nickname: nicknameInput.value.trim(),
+        hobbyCategory: categoryInput.value.trim(),
+        comment: commentInput.value.trim()
+      };
+      
+      try {
+        // GASへデータをPOST送信 (no-corsモード)
+        await fetch(GAS_WEB_APP_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "text/plain"
+          },
+          body: JSON.stringify(messageData)
+        });
+        
+        showResponse(responseMessage, "投稿が完了しました！ / Post completed successfully!", "success");
+        document.getElementById('boardForm').reset();
+        
+        // 1.5秒後にタイムラインを再読込して最新の状態にする
+        setTimeout(loadMessages, 1500);
+        
+      } catch (error) {
+        console.error("Error posting message:", error);
+        showResponse(responseMessage, "投稿エラーが発生しました。 / Post error occurred.", "error");
+      } finally {
+        submitBtn.disabled = false;
+        btnText.textContent = "投稿する / Post Message";
+        btnSpinner.style.display = "none";
+      }
+    });
+
+    // ==========================================
+    // 会員登録の申し込み (POST)
+    // ==========================================
     document.getElementById('registrationForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       
@@ -132,34 +358,29 @@
       const nameInput = document.getElementById('name');
       const emailInput = document.getElementById('email');
       
-      // クライアント側バリデーション (日英両対応)
+      // バリデーション
       if (!nameInput.value.trim()) {
-        showResponse("お名前を入力してください。 / Please enter your name.", "error");
+        showResponse(responseMessage, "お名前を入力してください。 / Please enter your name.", "error");
         return;
       }
       if (!emailInput.value.trim() || !validateEmail(emailInput.value)) {
-        showResponse("有効なメールアドレスを入力してください。 / Please enter a valid email address.", "error");
+        showResponse(responseMessage, "有効なメールアドレスを入力してください。 / Please enter a valid email address.", "error");
         return;
       }
 
-      // 送信開始時のUI状態変更
       submitBtn.disabled = true;
       btnText.textContent = "送信中... / Submitting...";
       btnSpinner.style.display = "inline-block";
-      responseMessage.className = "message-box"; // メッセージを隠す
+      responseMessage.className = "message-box";
       
       const formData = {
+        action: "register",
         name: nameInput.value.trim(),
         email: emailInput.value.trim()
       };
       
       try {
-        if (GAS_WEB_APP_URL.includes("ここにコピーしたGAS")) {
-          throw new Error("GASのウェブアプリURLが設定されていません。 / GAS web app URL is not configured.");
-        }
-
-        // GASへデータをPOST送信 (no-corsモードでCORS制約を回避)
-        const response = await fetch(GAS_WEB_APP_URL, {
+        await fetch(GAS_WEB_APP_URL, {
           method: "POST",
           mode: "no-cors",
           headers: {
@@ -168,31 +389,39 @@
           body: JSON.stringify(formData)
         });
         
-        // no-corsの場合レスポンス内容は確認できませんが、エラーが出なければ送信成功と判定
-        showResponse("お申し込みを受け付けました！登録ありがとうございます。 / Application received! Thank you.", "success");
+        showResponse(responseMessage, "お申し込みを受け付けました！ / Application received! Thank you.", "success");
         document.getElementById('registrationForm').reset();
         
       } catch (error) {
-        console.error("Error:", error);
-        showResponse(error.message || "送信エラーが発生しました。 / Submission error occurred.", "error");
+        console.error("Error signing up:", error);
+        showResponse(responseMessage, "送信エラーが発生しました。 / Submission error occurred.", "error");
       } finally {
-        // ボタンを元に戻す
         submitBtn.disabled = false;
         btnText.textContent = "この内容で送信する / Submit";
         btnSpinner.style.display = "none";
       }
     });
 
-    // レスポンスメッセージ表示用ヘルパー
-    function showResponse(text, type) {
-      responseMessage.textContent = text;
-      responseMessage.className = `message-box ${type}`;
+    // ==========================================
+    // ユーティリティ関数
+    // ==========================================
+    function showResponse(elem, text, type) {
+      elem.textContent = text;
+      elem.className = `message-box ${type}`;
     }
 
-    // メールアドレスフォーマット検証
     function validateEmail(email) {
       const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       return re.test(String(email).toLowerCase());
+    }
+
+    function escapeHTML(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
   </script>
 </body>
