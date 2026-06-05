@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="趣味を深め、仲間とつながる特別なクリエイティブ・コミュニティ。新規会員募集中です。あなたのご参加を心よりお待ちしております。">
+  <title>新規会員募集メンバーシップ - 共にはじめる、新しい一歩</title>
+  
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ヒーローセクション -->
+  <header>
+    <div class="badge">New Community</div>
+    <h1>新しい一歩を、<span>共にはじめよう。</span></h1>
+    <p>
+      趣味を深め、新たな知見を共有し、多様な仲間とつながる特別な場所。ただいま新規会員を限定募集しています。
+    </p>
+    <a href="#join-form" class="hero-btn" id="heroCtaBtn">今すぐ入会を申し込む</a>
+    
+    <!-- 生成したヒーロー画像を表示 -->
+    <div class="hero-image-container">
+      <img src="hero_community.png" class="hero-image" alt="コラボレーションするコミュニティメンバーのイメージイラスト" id="heroImage">
+    </div>
+  </header>
+
+  <!-- 特徴・ポイントセクション -->
+  <main>
+    <section class="features-section" id="features">
+      <h2 class="section-title">選ばれる3つのポイント</h2>
+      
+      <div class="features-grid">
+        <article class="feature-card">
+          <div class="feature-num" aria-hidden="true">1</div>
+          <h3>心地よいサードプレイス</h3>
+          <p>日常から少し離れて、年齢や肩書に関係なくフラットに楽しめる居心地の良い空間を提供します。自分らしさを表現できる場所です。</p>
+        </article>
+        
+        <article class="feature-card">
+          <div class="feature-num" aria-hidden="true">2</div>
+          <h3>多彩なアクティビティ</h3>
+          <p>定期的なオンライン・オフラインイベントや、お互いの知見・興味を深め合える勉強会やワークショップを毎月企画しています。</p>
+        </article>
+        
+        <article class="feature-card">
+          <div class="feature-num" aria-hidden="true">3</div>
+          <h3>初心者でも安心</h3>
+          <p>新メンバーが馴染みやすいよう、既存メンバーや運営によるサポート体制が整っているため、初めてコミュニティに参加する方も安心です。</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- フォームセクション -->
+    <section id="join-form" class="form-section">
+      <div class="form-container">
+        <h2>会員登録お申し込み</h2>
+        <p class="form-subtitle">以下のフォームに必要事項を入力し、送信してください。</p>
+        
+        <form id="registrationForm" novalidate>
+          <div class="form-group">
+            <label for="name">お名前</label>
+            <input type="text" id="name" required placeholder="山田 太郎">
+          </div>
+          
+          <div class="form-group">
+            <label for="email">メールアドレス</label>
+            <input type="email" id="email" required placeholder="example@email.com">
+          </div>
+          
+          <button type="submit" id="submitBtn" class="submit-btn">
+            <span class="spinner" id="btnSpinner" aria-hidden="true"></span>
+            <span id="btnText">この内容で送信する</span>
+          </button>
+        </form>
+        
+        <div id="responseMessage" class="message-box" role="alert" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- フッター -->
+  <footer>
+    <p>&copy; 2026 Community Name. All rights reserved.</p>
+  </footer>
+
+  <script>
+    // ⚠️【重要】ここにGASのウェブアプリURLを貼り付けてください
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyh7INjGDMVl18-U-OS8OLnyybrCoGD_Ipkthq9NbycpABHc-zEMad1nahpGixVgP7o/exec";
+
+    document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('submitBtn');
+      const btnText = document.getElementById('btnText');
+      const btnSpinner = document.getElementById('btnSpinner');
+      const responseMessage = document.getElementById('responseMessage');
+      
+      const nameInput = document.getElementById('name');
+      const emailInput = document.getElementById('email');
+      
+      // クライアント側バリデーション
+      if (!nameInput.value.trim()) {
+        showResponse("お名前を入力してください。", "error");
+        return;
+      }
+      if (!emailInput.value.trim() || !validateEmail(emailInput.value)) {
+        showResponse("有効なメールアドレスを入力してください。", "error");
+        return;
+      }
+
+      // 送信開始時のUI状態変更
+      submitBtn.disabled = true;
+      btnText.textContent = "送信中...";
+      btnSpinner.style.display = "inline-block";
+      responseMessage.className = "message-box"; // メッセージを隠す
+      
+      const formData = {
+        name: nameInput.value.trim(),
+        email: emailInput.value.trim()
+      };
+      
+      try {
+        if (GAS_WEB_APP_URL.includes("ここにコピーしたGAS")) {
+          throw new Error("GASのウェブアプリURLが設定されていません。GAS_WEB_APP_URLを修正してください。");
+        }
+
+        // GASへデータをPOST送信 (no-corsモードでCORS制約を回避)
+        const response = await fetch(GAS_WEB_APP_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "text/plain"
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        // no-corsの場合レスポンス内容は確認できませんが、エラーが出なければ送信成功と判定
+        showResponse("お申し込みを受け付けました！登録ありがとうございます。", "success");
+        document.getElementById('registrationForm').reset();
+        
+      } catch (error) {
+        console.error("Error:", error);
+        showResponse(error.message || "送信エラーが発生しました。しばらく経ってから再度お試しください。", "error");
+      } finally {
+        // ボタンを元に戻す
+        submitBtn.disabled = false;
+        btnText.textContent = "この内容で送信する";
+        btnSpinner.style.display = "none";
+      }
+    });
+
+    // レスポンスメッセージ表示用ヘルパー
+    function showResponse(text, type) {
+      responseMessage.textContent = text;
+      responseMessage.className = `message-box ${type}`;
+    }
+
+    // メールアドレスフォーマット検証
+    function validateEmail(email) {
+      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return re.test(String(email).toLowerCase());
+    }
+  </script>
+</body>
+</html>
