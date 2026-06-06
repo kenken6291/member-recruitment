@@ -449,14 +449,27 @@
       appId: "YOUR_APP_ID_HERE"
     };
 
-    // Firebase初期化
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const storage = getStorage(app);
+    // モックモードの判定
+    // APIキーが初期値（プレースホルダー）のままである場合、またはURLに?mock=trueが含まれる場合、デモ用のモックモードで動作させます。
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceMock = urlParams.get('mock') === 'true';
+    const isMockMode = forceMock || firebaseConfig.apiKey === "YOUR_API_KEY_HERE" || !firebaseConfig.apiKey;
+
+    // Firebase初期化 (モックモードでなければ実行)
+    let app, auth, db, storage;
+    if (!isMockMode) {
+      try {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+        storage = getStorage(app);
+      } catch (e) {
+        console.error("Firebaseの初期化に失敗しました。モックモードへ移行します:", e);
+      }
+    }
 
     // アプリケーション状態
-    let currentUserProfile = null; // ログインユーザーのFirestoreプロファイル
+    let currentUserProfile = null; // ログインユーザーのプロファイル
     let allMessages = [];
     let currentSort = "newest";
     let currentFilter = "all";
@@ -472,6 +485,56 @@
     const smsVerifyCard = document.getElementById("smsVerifyCard");
     const resetCard = document.getElementById("resetCard");
     const authResponseMessage = document.getElementById("authResponseMessage");
+
+    // ==========================================
+    // デモ用モックデータベース初期設定 (ローカルストレージ)
+    // ==========================================
+    const DEFAULT_MOCK_POSTS = [
+      {
+        id: "post-1",
+        uid: "mock-user-alpha",
+        nickname: "卓球好きのケン",
+        category: "卓球",
+        comment: "週末に市民体育館で卓球の練習をします！初心者の方も大歓迎ですので、ぜひ一緒にラリーを楽しみましょう！",
+        imageUrl: "",
+        likes: 3,
+        likedBy: ["mock-user-beta"],
+        timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
+        parentId: null
+      },
+      {
+        id: "post-2",
+        uid: "mock-user-beta",
+        nickname: "ダンシングクイーン",
+        category: "ダンス",
+        comment: "来週の土曜日にサロンでサルサの無料体験レッスンを開催します。音楽に合わせて楽しく体を動かしませんか？",
+        imageUrl: "",
+        likes: 5,
+        likedBy: ["mock-user-alpha"],
+        timestamp: new Date(Date.now() - 3600000).toISOString(),
+        parentId: null
+      }
+    ];
+
+    const DEFAULT_MOCK_USERS = {
+      "demo@example.com": {
+        uid: "mock-user-demo",
+        email: "demo@example.com",
+        password: "password",
+        nickname: "デモユーザー",
+        phone: "+819000000000"
+      }
+    };
+
+    if (isMockMode) {
+      console.log("⚠️ Firebase APIキー未設定のため、デモ用【モックモード】で動作しています。");
+      if (!localStorage.getItem("mock_posts")) {
+        localStorage.setItem("mock_posts", JSON.stringify(DEFAULT_MOCK_POSTS));
+      }
+      if (!localStorage.getItem("mock_users")) {
+        localStorage.setItem("mock_users", JSON.stringify(DEFAULT_MOCK_USERS));
+      }
+    }
 
     // ==========================================
     // 認証画面表示切り替え
@@ -493,57 +556,81 @@
     document.getElementById("resetToLoginBtn").addEventListener("click", (e) => { e.preventDefault(); showCard("loginCard"); });
     document.getElementById("cancelSmsBtn").addEventListener("click", (e) => { e.preventDefault(); showCard("signupCard"); });
 
-    // reCAPTCHAの初期化
+    // reCAPTCHAの初期化 (モックモード時は空処理)
     function initRecaptcha() {
+      if (isMockMode) return;
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          'size': 'normal', // 目に見えるreCAPTCHA (SMSの確実な動作のため)
-          'callback': (response) => {
-            // reCAPTCHA解決時のコールバック
-          }
+          'size': 'normal',
+          'callback': (response) => {}
         });
         window.recaptchaVerifier.render();
       }
     }
 
+    // すべての認証フォームのボタンローディング状態を初期化する
+    function resetAuthFormsLoading() {
+      setLoadingState(document.getElementById("loginSubmitBtn"), document.getElementById("loginSpinner"), document.getElementById("loginBtnText"), false, "ログイン / Login");
+      setLoadingState(document.getElementById("signupSubmitBtn"), document.getElementById("signupSpinner"), document.getElementById("signupBtnText"), false, "SMS認証コードを送信 / Send Code");
+      setLoadingState(document.getElementById("smsSubmitBtn"), document.getElementById("smsSpinner"), document.getElementById("smsBtnText"), false, "認証して登録完了 / Verify & Complete");
+      setLoadingState(document.getElementById("resetSubmitBtn"), document.getElementById("resetSpinner"), document.getElementById("resetBtnText"), false, "リセットメールを送信 / Send Reset Email");
+    }
+
     // ==========================================
-    // 認証状態の監視
+    // 認証状態の監視 & ログイン状態初期化
     // ==========================================
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          // ユーザープロファイルをFirestoreから取得
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            currentUserProfile = userDoc.data();
-            
-            // ログインユーザー名を掲示板フォームに反映
-            document.getElementById("boardUserNickname").textContent = currentUserProfile.nickname;
-            
-            // ログイン成功: UI切り替え
-            authContainer.style.display = "none";
-            appContainer.style.display = "block";
-            
-            // 掲示板データの読み込み開始 (リアルタイムリスナー)
-            subscribeToMessages();
-          } else {
-            // Firestoreにユーザーデータがない場合 (仮登録や手動削除など)
-            // 未認証状態とみなしサインアウト
-            await signOut(auth);
-          }
-        } catch (error) {
-          console.error("ユーザー情報の取得に失敗しました:", error);
-          showAuthResponse("ログイン中にエラーが発生しました。再度お試しください。", "error");
-          await signOut(auth);
-        }
+    function checkMockAuth() {
+      const loggedInUserStr = sessionStorage.getItem("mock_logged_in_user");
+      if (loggedInUserStr) {
+        const mockUser = JSON.parse(loggedInUserStr);
+        currentUserProfile = mockUser;
+        
+        document.getElementById("boardUserNickname").textContent = currentUserProfile.nickname;
+        authContainer.style.display = "none";
+        appContainer.style.display = "block";
+        
+        subscribeToMessages();
       } else {
-        // 未ログイン
         currentUserProfile = null;
         appContainer.style.display = "none";
         authContainer.style.display = "flex";
+        resetAuthFormsLoading();
         showCard("loginCard");
       }
-    });
+    }
+
+    if (isMockMode) {
+      checkMockAuth();
+    } else {
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          try {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+              currentUserProfile = userDoc.data();
+              
+              document.getElementById("boardUserNickname").textContent = currentUserProfile.nickname;
+              authContainer.style.display = "none";
+              appContainer.style.display = "block";
+              
+              subscribeToMessages();
+            } else {
+              await signOut(auth);
+            }
+          } catch (error) {
+            console.error("ユーザー情報の取得に失敗しました:", error);
+            showAuthResponse("ログイン中にエラーが発生しました。再度お試しください。", "error");
+            await signOut(auth);
+          }
+        } else {
+          currentUserProfile = null;
+          appContainer.style.display = "none";
+          authContainer.style.display = "flex";
+          resetAuthFormsLoading();
+          showCard("loginCard");
+        }
+      });
+    }
 
     // ==========================================
     // ログイン処理
@@ -563,16 +650,30 @@
 
       setLoadingState(submitBtn, spinner, btnText, true, "ログイン中...");
 
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-      } catch (error) {
-        console.error("Login error:", error);
-        let errorMsg = "ログインに失敗しました。";
-        if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
-          errorMsg = "メールアドレスまたはパスワードが正しくありません。";
+      if (isMockMode) {
+        setTimeout(() => {
+          const users = JSON.parse(localStorage.getItem("mock_users") || "{}");
+          const user = users[email];
+          if (user && user.password === password) {
+            sessionStorage.setItem("mock_logged_in_user", JSON.stringify(user));
+            checkMockAuth();
+          } else {
+            showAuthResponse("メールアドレスまたはパスワードが正しくありません。(デモ用: demo@example.com / password)", "error");
+            setLoadingState(submitBtn, spinner, btnText, false, "ログイン / Login");
+          }
+        }, 800);
+      } else {
+        try {
+          await signInWithEmailAndPassword(auth, email, password);
+        } catch (error) {
+          console.error("Login error:", error);
+          let errorMsg = "ログインに失敗しました。";
+          if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
+            errorMsg = "メールアドレスまたはパスワードが正しくありません。";
+          }
+          showAuthResponse(errorMsg, "error");
+          setLoadingState(submitBtn, spinner, btnText, false, "ログイン / Login");
         }
-        showAuthResponse(errorMsg, "error");
-        setLoadingState(submitBtn, spinner, btnText, false, "ログイン / Login");
       }
     });
 
@@ -599,7 +700,6 @@
         return;
       }
 
-      // 電話番号のフォーマット変換 (日本の国番号 +81)
       let formattedPhone = phone;
       if (formattedPhone.startsWith("0")) {
         formattedPhone = "+81" + formattedPhone.substring(1);
@@ -611,29 +711,47 @@
 
       setLoadingState(submitBtn, spinner, btnText, true, "SMS送信中...");
 
-      try {
-        initRecaptcha();
-        const appVerifier = window.recaptchaVerifier;
-        const confirmationResult = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
-        
-        // 送信成功
-        window.confirmationResult = confirmationResult;
-        tempSignupData = { nickname, email, password, phone: formattedPhone };
+      if (isMockMode) {
+        setTimeout(() => {
+          const users = JSON.parse(localStorage.getItem("mock_users") || "{}");
+          if (users[email]) {
+            showAuthResponse("このメールアドレスは既に登録されています。", "error");
+            setLoadingState(submitBtn, spinner, btnText, false, "SMS認証コードを送信 / Send Code");
+            return;
+          }
 
-        document.getElementById("verifyPhoneDisplay").textContent = phone;
-        showCard("smsVerifyCard");
-      } catch (error) {
-        console.error("SMS Send error:", error);
-        let errorMsg = "SMS送信に失敗しました。電話番号が正しいかご確認ください。";
-        if (error.code === "auth/invalid-phone-number") {
-          errorMsg = "無効な電話番号です。日本の携帯番号を入力してください。";
-        }
-        showAuthResponse(errorMsg, "error");
-        setLoadingState(submitBtn, spinner, btnText, false, "SMS認証コードを送信 / Send Code");
-        if (window.recaptchaVerifier) {
-          window.recaptchaVerifier.render().then(widgetId => {
-            grecaptcha.reset(widgetId);
-          });
+          tempSignupData = { nickname, email, password, phone: formattedPhone };
+          document.getElementById("verifyPhoneDisplay").textContent = phone;
+          
+          alert(`【デモ用SMS送信シミュレーション】\n携帯番号: ${phone} 宛てにSMSを送信しました。\n認証コードは [ 123456 ] です。`);
+          
+          showCard("smsVerifyCard");
+          setLoadingState(submitBtn, spinner, btnText, false, "SMS認証コードを送信 / Send Code");
+        }, 1000);
+      } else {
+        try {
+          initRecaptcha();
+          const appVerifier = window.recaptchaVerifier;
+          const confirmationResult = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
+          
+          window.confirmationResult = confirmationResult;
+          tempSignupData = { nickname, email, password, phone: formattedPhone };
+
+          document.getElementById("verifyPhoneDisplay").textContent = phone;
+          showCard("smsVerifyCard");
+        } catch (error) {
+          console.error("SMS Send error:", error);
+          let errorMsg = "SMS送信に失敗しました。電話番号が正しいかご確認ください。";
+          if (error.code === "auth/invalid-phone-number") {
+            errorMsg = "無効な電話番号です。日本の携帯番号を入力してください。";
+          }
+          showAuthResponse(errorMsg, "error");
+          setLoadingState(submitBtn, spinner, btnText, false, "SMS認証コードを送信 / Send Code");
+          if (window.recaptchaVerifier) {
+            window.recaptchaVerifier.render().then(widgetId => {
+              grecaptcha.reset(widgetId);
+            });
+          }
         }
       }
     });
@@ -655,29 +773,58 @@
 
       setLoadingState(submitBtn, spinner, btnText, true, "検証中...");
 
-      try {
-        const result = await window.confirmationResult.confirm(code);
-        const user = result.user;
+      if (isMockMode) {
+        setTimeout(() => {
+          if (code === "123456") {
+            const users = JSON.parse(localStorage.getItem("mock_users") || "{}");
+            const newUid = "mock-user-" + Date.now();
+            const newUser = {
+              uid: newUid,
+              email: tempSignupData.email,
+              password: tempSignupData.password,
+              nickname: tempSignupData.nickname,
+              phone: tempSignupData.phone
+            };
+            
+            users[tempSignupData.email] = newUser;
+            localStorage.setItem("mock_users", JSON.stringify(users));
+            
+            sessionStorage.setItem("mock_logged_in_user", JSON.stringify(newUser));
+            showAuthResponse("会員登録が完了しました！ログイン中...", "success");
+            
+            setTimeout(() => {
+              checkMockAuth();
+            }, 1000);
+          } else {
+            showAuthResponse("認証コードが正しくありません。(デモ用: 123456)", "error");
+            setLoadingState(submitBtn, spinner, btnText, false, "認証して登録完了 / Verify & Complete");
+          }
+        }, 800);
+      } else {
+        try {
+          const result = await window.confirmationResult.confirm(code);
+          const user = result.user;
 
-        const credential = EmailAuthProvider.credential(tempSignupData.email, tempSignupData.password);
-        await linkWithCredential(user, credential);
+          const credential = EmailAuthProvider.credential(tempSignupData.email, tempSignupData.password);
+          await linkWithCredential(user, credential);
 
-        await setDoc(doc(db, "users", user.uid), {
-          nickname: tempSignupData.nickname,
-          email: tempSignupData.email,
-          phone: tempSignupData.phone,
-          createdAt: serverTimestamp()
-        });
+          await setDoc(doc(db, "users", user.uid), {
+            nickname: tempSignupData.nickname,
+            email: tempSignupData.email,
+            phone: tempSignupData.phone,
+            createdAt: serverTimestamp()
+          });
 
-        showAuthResponse("会員登録が完了しました！ログイン中...", "success");
-      } catch (error) {
-        console.error("Verification error:", error);
-        let errorMsg = "認証に失敗しました。コードが正しいかご確認ください。";
-        if (error.code === "auth/credential-already-in-use") {
-          errorMsg = "このメールアドレス、または電話番号は既に別の登録で使用されています。";
+          showAuthResponse("会員登録が完了しました！ログイン中...", "success");
+        } catch (error) {
+          console.error("Verification error:", error);
+          let errorMsg = "認証に失敗しました。コードが正しいかご確認ください。";
+          if (error.code === "auth/credential-already-in-use") {
+            errorMsg = "このメールアドレス、または電話番号は既に別の登録で使用されています。";
+          }
+          showAuthResponse(errorMsg, "error");
+          setLoadingState(submitBtn, spinner, btnText, false, "認証して登録完了 / Verify & Complete");
         }
-        showAuthResponse(errorMsg, "error");
-        setLoadingState(submitBtn, spinner, btnText, false, "認証して登録完了 / Verify & Complete");
       }
     });
 
@@ -698,15 +845,27 @@
 
       setLoadingState(submitBtn, spinner, btnText, true, "送信中...");
 
-      try {
-        await sendPasswordResetEmail(auth, email);
-        showAuthResponse("パスワード再設定用メールを送信しました。メールボックスをご確認ください。", "success");
-        setLoadingState(submitBtn, spinner, btnText, false, "リセットメールを送信 / Send Reset Email");
-      } catch (error) {
-        console.error("Password reset error:", error);
-        let errorMsg = "メール送信に失敗しました。メールアドレスが正しいかご確認ください。";
-        showAuthResponse(errorMsg, "error");
-        setLoadingState(submitBtn, spinner, btnText, false, "リセットメールを送信 / Send Reset Email");
+      if (isMockMode) {
+        setTimeout(() => {
+          const users = JSON.parse(localStorage.getItem("mock_users") || "{}");
+          if (users[email]) {
+            showAuthResponse("パスワード再設定用メールを送信しました。(デモシミュレーション)", "success");
+          } else {
+            showAuthResponse("登録されていないメールアドレスです。", "error");
+          }
+          setLoadingState(submitBtn, spinner, btnText, false, "リセットメールを送信 / Send Reset Email");
+        }, 800);
+      } else {
+        try {
+          await sendPasswordResetEmail(auth, email);
+          showAuthResponse("パスワード再設定用メールを送信しました。メールボックスをご確認ください。", "success");
+          setLoadingState(submitBtn, spinner, btnText, false, "リセットメールを送信 / Send Reset Email");
+        } catch (error) {
+          console.error("Password reset error:", error);
+          let errorMsg = "メール送信に失敗しました。メールアドレスが正しいかご確認ください。";
+          showAuthResponse(errorMsg, "error");
+          setLoadingState(submitBtn, spinner, btnText, false, "リセットメールを送信 / Send Reset Email");
+        }
       }
     });
 
@@ -715,10 +874,15 @@
     // ==========================================
     document.getElementById("logoutBtn").addEventListener("click", async (e) => {
       e.preventDefault();
-      try {
-        await signOut(auth);
-      } catch (error) {
-        console.error("Signout error:", error);
+      if (isMockMode) {
+        sessionStorage.removeItem("mock_logged_in_user");
+        checkMockAuth();
+      } else {
+        try {
+          await signOut(auth);
+        } catch (error) {
+          console.error("Signout error:", error);
+        }
       }
     });
 
@@ -728,6 +892,13 @@
     let unsubscribeMessages = null;
 
     function subscribeToMessages() {
+      if (isMockMode) {
+        loadMockMessages();
+        window.removeEventListener('storage', loadMockMessages);
+        window.addEventListener('storage', loadMockMessages);
+        return;
+      }
+
       if (unsubscribeMessages) unsubscribeMessages();
 
       const timeline = document.getElementById("messageTimeline");
@@ -757,13 +928,21 @@
       });
     }
 
+    function loadMockMessages() {
+      const mockPostsStr = localStorage.getItem("mock_posts") || "[]";
+      allMessages = JSON.parse(mockPostsStr);
+      updateFilterOptions();
+      updateDatalistOptions();
+      renderTimeline();
+    }
+
     // ==========================================
     // 掲示板メッセージの投稿 (Firestore)
     // ==========================================
     document.getElementById('boardForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       
-      if (!auth.currentUser || !currentUserProfile) {
+      if (!currentUserProfile) {
         alert("ログインしていません。");
         return;
       }
@@ -790,39 +969,67 @@
       btnSpinner.style.display = "inline-block";
       responseMessage.className = "message-box"; 
 
-      try {
-        let imageUrl = "";
+      if (isMockMode) {
+        setTimeout(() => {
+          const mockPosts = JSON.parse(localStorage.getItem("mock_posts") || "[]");
+          const newPost = {
+            id: "post-" + Date.now(),
+            uid: currentUserProfile.uid,
+            nickname: currentUserProfile.nickname,
+            category: categoryInput.value.trim(),
+            comment: commentInput.value.trim(),
+            imageUrl: selectedBase64Image || "", 
+            likes: 0,
+            likedBy: [],
+            timestamp: new Date().toISOString(),
+            parentId: null
+          };
 
-        if (selectedBase64Image) {
-          const storageRef = ref(storage, `images/${Date.now()}_${selectedImageMeta.name}`);
-          const uploadResult = await uploadString(storageRef, selectedBase64Image, 'data_url');
-          imageUrl = await getDownloadURL(uploadResult.ref);
+          mockPosts.unshift(newPost);
+          localStorage.setItem("mock_posts", JSON.stringify(mockPosts));
+          loadMockMessages();
+          
+          showResponse(responseMessage, "投稿が完了しました！", "success");
+          document.getElementById('boardForm').reset();
+          removeSelectedImage();
+          
+          submitBtn.disabled = false;
+          btnText.textContent = "投稿する / Post Message";
+          btnSpinner.style.display = "none";
+        }, 800);
+      } else {
+        try {
+          let imageUrl = "";
+
+          if (selectedBase64Image) {
+            const storageRef = ref(storage, `images/${Date.now()}_${selectedImageMeta.name}`);
+            const uploadResult = await uploadString(storageRef, selectedBase64Image, 'data_url');
+            imageUrl = await getDownloadURL(uploadResult.ref);
+          }
+
+          await addDoc(collection(db, "posts"), {
+            uid: auth.currentUser.uid,
+            nickname: currentUserProfile.nickname,
+            category: categoryInput.value.trim(),
+            comment: commentInput.value.trim(),
+            imageUrl: imageUrl,
+            likes: 0,
+            likedBy: [],
+            timestamp: serverTimestamp(),
+            parentId: null
+          });
+
+          showResponse(responseMessage, "投稿が完了しました！", "success");
+          document.getElementById('boardForm').reset();
+          removeSelectedImage();
+        } catch (error) {
+          console.error("Firestore post error:", error);
+          showResponse(responseMessage, "投稿エラーが発生しました。", "error");
+        } finally {
+          submitBtn.disabled = false;
+          btnText.textContent = "投稿する / Post Message";
+          btnSpinner.style.display = "none";
         }
-
-        await addDoc(collection(db, "posts"), {
-          uid: auth.currentUser.uid,
-          nickname: currentUserProfile.nickname,
-          category: categoryInput.value.trim(),
-          comment: commentInput.value.trim(),
-          imageUrl: imageUrl,
-          likes: 0,
-          likedBy: [],
-          timestamp: serverTimestamp(),
-          parentId: null
-        });
-
-        showResponse(responseMessage, "投稿が完了しました！", "success");
-        
-        document.getElementById('boardForm').reset();
-        removeSelectedImage();
-        
-      } catch (error) {
-        console.error("Firestore post error:", error);
-        showResponse(responseMessage, "投稿エラーが発生しました。", "error");
-      } finally {
-        submitBtn.disabled = false;
-        btnText.textContent = "投稿する / Post Message";
-        btnSpinner.style.display = "none";
       }
     });
 
@@ -832,7 +1039,7 @@
     window.submitReply = async function(event, parentId) {
       event.preventDefault();
       
-      if (!auth.currentUser || !currentUserProfile) {
+      if (!currentUserProfile) {
         alert("ログインしていません。");
         return;
       }
@@ -850,26 +1057,51 @@
       const originalBtnText = submitBtn.innerHTML;
       submitBtn.innerHTML = "<span>送信中...</span>";
 
-      try {
-        await addDoc(collection(db, "posts"), {
-          uid: auth.currentUser.uid,
-          nickname: currentUserProfile.nickname,
-          comment: commentInput.value.trim(),
-          likes: 0,
-          likedBy: [],
-          timestamp: serverTimestamp(),
-          parentId: parentId
-        });
+      if (isMockMode) {
+        setTimeout(() => {
+          const mockPosts = JSON.parse(localStorage.getItem("mock_posts") || "[]");
+          const newReply = {
+            id: "reply-" + Date.now(),
+            uid: currentUserProfile.uid,
+            nickname: currentUserProfile.nickname,
+            comment: commentInput.value.trim(),
+            likes: 0,
+            likedBy: [],
+            timestamp: new Date().toISOString(),
+            parentId: parentId
+          };
 
-        document.getElementById(`replyForm-${parentId}`).style.display = "none";
-        form.reset();
-        
-      } catch (error) {
-        console.error("Firestore reply error:", error);
-        alert("返信の送信に失敗しました。");
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnText;
+          mockPosts.push(newReply);
+          localStorage.setItem("mock_posts", JSON.stringify(mockPosts));
+          loadMockMessages();
+
+          document.getElementById(`replyForm-${parentId}`).style.display = "none";
+          form.reset();
+
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
+        }, 600);
+      } else {
+        try {
+          await addDoc(collection(db, "posts"), {
+            uid: auth.currentUser.uid,
+            nickname: currentUserProfile.nickname,
+            comment: commentInput.value.trim(),
+            likes: 0,
+            likedBy: [],
+            timestamp: serverTimestamp(),
+            parentId: parentId
+          });
+
+          document.getElementById(`replyForm-${parentId}`).style.display = "none";
+          form.reset();
+        } catch (error) {
+          console.error("Firestore reply error:", error);
+          alert("返信の送信に失敗しました。");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
+        }
       }
     };
 
@@ -877,43 +1109,62 @@
     // いいねの送信 (Firestore)
     // ==========================================
     window.sendLike = async function(messageId, btnElement) {
-      if (!auth.currentUser) {
+      if (!currentUserProfile) {
         alert("いいねするにはログインが必要です。");
         return;
       }
       if (btnElement.disabled) return;
       
       btnElement.disabled = true;
-      const uid = auth.currentUser.uid;
+      const uid = currentUserProfile.uid;
       const countSpan = btnElement.querySelector('.like-count');
       const currentCount = parseInt(countSpan.textContent) || 0;
-      const postRef = doc(db, "posts", messageId);
-      
+
       const postMsg = allMessages.find(m => m.id === messageId);
       const hasLiked = postMsg && postMsg.likedBy && postMsg.likedBy.includes(uid);
 
-      try {
-        if (hasLiked) {
-          countSpan.textContent = Math.max(0, currentCount - 1);
-          btnElement.classList.remove('liked');
-          await updateDoc(postRef, {
-            likes: increment(-1),
-            likedBy: arrayRemove(uid)
-          });
-        } else {
-          countSpan.textContent = currentCount + 1;
-          btnElement.classList.add('liked');
-          await updateDoc(postRef, {
-            likes: increment(1),
-            likedBy: arrayUnion(uid)
-          });
-        }
-      } catch (error) {
-        console.error("Firestore like error:", error);
-        countSpan.textContent = currentCount;
-        btnElement.classList.toggle('liked', hasLiked);
-      } finally {
+      if (isMockMode) {
+        let mockPosts = JSON.parse(localStorage.getItem("mock_posts") || "[]");
+        mockPosts = mockPosts.map(post => {
+          if (post.id === messageId) {
+            const likedBy = post.likedBy || [];
+            if (hasLiked) {
+              return { ...post, likes: Math.max(0, post.likes - 1), likedBy: likedBy.filter(id => id !== uid) };
+            } else {
+              return { ...post, likes: post.likes + 1, likedBy: [...likedBy, uid] };
+            }
+          }
+          return post;
+        });
+
+        localStorage.setItem("mock_posts", JSON.stringify(mockPosts));
+        loadMockMessages();
         btnElement.disabled = false;
+      } else {
+        const postRef = doc(db, "posts", messageId);
+        try {
+          if (hasLiked) {
+            countSpan.textContent = Math.max(0, currentCount - 1);
+            btnElement.classList.remove('liked');
+            await updateDoc(postRef, {
+              likes: increment(-1),
+              likedBy: arrayRemove(uid)
+            });
+          } else {
+            countSpan.textContent = currentCount + 1;
+            btnElement.classList.add('liked');
+            await updateDoc(postRef, {
+              likes: increment(1),
+              likedBy: arrayUnion(uid)
+            });
+          }
+        } catch (error) {
+          console.error("Firestore like error:", error);
+          countSpan.textContent = currentCount;
+          btnElement.classList.toggle('liked', hasLiked);
+        } finally {
+          btnElement.disabled = false;
+        }
       }
     };
 
@@ -943,24 +1194,44 @@
       btnSpinner.style.display = "inline-block";
       responseMessage.className = "message-box";
       
-      try {
-        await addDoc(collection(db, "applications"), {
-          name: nameInput.value.trim(),
-          email: emailInput.value.trim(),
-          uid: auth.currentUser ? auth.currentUser.uid : "anonymous",
-          timestamp: serverTimestamp()
-        });
-        
-        showResponse(responseMessage, "お申し込みを受け付けました！ありがとうございます。", "success");
-        document.getElementById('registrationForm').reset();
-        
-      } catch (error) {
-        console.error("Firestore registration apply error:", error);
-        showResponse(responseMessage, "送信エラーが発生しました。", "error");
-      } finally {
-        submitBtn.disabled = false;
-        btnText.textContent = "この内容で送信する / Submit";
-        btnSpinner.style.display = "none";
+      if (isMockMode) {
+        setTimeout(() => {
+          const applications = JSON.parse(localStorage.getItem("mock_applications") || "[]");
+          applications.push({
+            id: "app-" + Date.now(),
+            name: nameInput.value.trim(),
+            email: emailInput.value.trim(),
+            uid: currentUserProfile ? currentUserProfile.uid : "anonymous",
+            timestamp: new Date().toISOString()
+          });
+          localStorage.setItem("mock_applications", JSON.stringify(applications));
+          
+          showResponse(responseMessage, "お申し込みを受け付けました！ありがとうございます。(デモ)", "success");
+          document.getElementById('registrationForm').reset();
+          
+          submitBtn.disabled = false;
+          btnText.textContent = "この内容で送信する / Submit";
+          btnSpinner.style.display = "none";
+        }, 800);
+      } else {
+        try {
+          await addDoc(collection(db, "applications"), {
+            name: nameInput.value.trim(),
+            email: emailInput.value.trim(),
+            uid: auth.currentUser ? auth.currentUser.uid : "anonymous",
+            timestamp: serverTimestamp()
+          });
+          
+          showResponse(responseMessage, "お申し込みを受け付けました！ありがとうございます。", "success");
+          document.getElementById('registrationForm').reset();
+        } catch (error) {
+          console.error("Firestore registration apply error:", error);
+          showResponse(responseMessage, "送信エラーが発生しました。", "error");
+        } finally {
+          submitBtn.disabled = false;
+          btnText.textContent = "この内容で送信する / Submit";
+          btnSpinner.style.display = "none";
+        }
       }
     });
 
@@ -1104,7 +1375,7 @@
         const cardWrapper = document.createElement('div');
         cardWrapper.className = 'message-thread-group';
         
-        const hasLiked = auth.currentUser && msg.likedBy && msg.likedBy.includes(auth.currentUser.uid);
+        const hasLiked = currentUserProfile && msg.likedBy && msg.likedBy.includes(currentUserProfile.uid);
         
         const mainCard = document.createElement('div');
         mainCard.className = 'message-card parent-message';
