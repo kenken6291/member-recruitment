@@ -125,8 +125,8 @@
           みんなの交流スペース（掲示板）
           <span class="section-en-title">Community Board</span>
         </h2>
-        <p class="board-subtitle">趣味や一言コメントを気軽に投稿して交流しましょう！</p>
-        <p class="board-subtitle en-text">Feel free to post your hobbies or leave a comment to connect!</p>
+        <p class="board-subtitle">写真や趣味を投稿して交流しましょう！返信や「いいね」も大歓迎です。</p>
+        <p class="board-subtitle en-text">Share photos and hobbies to connect! Replies and Likes are welcome.</p>
         
         <div class="board-layout">
           <!-- 投稿フォーム -->
@@ -139,12 +139,27 @@
               
               <div class="form-group">
                 <label for="hobbyCategory">趣味のジャンル <span class="en-label">/ Hobby Genre</span></label>
-                <input type="text" id="hobbyCategory" required placeholder="例: カメラ, ダンス (e.g. Photography)">
+                <!-- datalistを紐付け -->
+                <input type="text" id="hobbyCategory" list="hobbyList" required placeholder="例: 卓球, カメラ (Select or type)">
+                <datalist id="hobbyList">
+                  <!-- JSで動的に追加されます -->
+                </datalist>
               </div>
               
               <div class="form-group">
                 <label for="comment">一言コメント <span class="en-label">/ Comment</span></label>
                 <textarea id="comment" required placeholder="こんにちは！気軽に話しかけてください。(Hello! Feel free to say hi.)" rows="3"></textarea>
+              </div>
+
+              <!-- 写真アップロード機能 -->
+              <div class="form-group">
+                <label for="photoInput">写真を追加 <span class="en-label">/ Add Photo (Optional)</span></label>
+                <div class="file-input-wrapper">
+                  <input type="file" id="photoInput" accept="image/*">
+                  <div class="file-custom-btn">📸 画像を選択 / Select Image</div>
+                </div>
+                <!-- プレビュー領域 -->
+                <div id="imagePreviewContainer" class="image-preview-container"></div>
               </div>
               
               <button type="submit" id="boardSubmitBtn" class="submit-btn">
@@ -157,7 +172,23 @@
           
           <!-- メッセージタイムライン -->
           <div class="timeline-wrapper">
-            <h3>最近の投稿 <span class="en-sub-title">Recent Activity</span></h3>
+            <div class="timeline-control-panel">
+              <!-- ソートタブ -->
+              <div class="sort-tabs" role="tablist">
+                <button id="sortNewest" class="sort-tab active" role="tab" aria-selected="true">新着順 / Newest</button>
+                <button id="sortPopular" class="sort-tab" role="tab" aria-selected="false">いいね順 / Popular</button>
+              </div>
+              
+              <!-- フィルタプルダウン -->
+              <div class="filter-wrapper">
+                <label for="filterCategory" class="en-label">ジャンル絞り込み / Filter:</label>
+                <select id="filterCategory" class="filter-select">
+                  <option value="all">すべてのジャンル / All</option>
+                  <!-- JSで動的に追加されます -->
+                </select>
+              </div>
+            </div>
+
             <div id="messageTimeline" class="timeline-list">
               <div class="loading-state">
                 <span class="loading-spinner"></span>
@@ -212,11 +243,83 @@
     // ユーザー提供のGASウェブアプリURL
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyh7INjGDMVl18-U-OS8OLnyybrCoGD_Ipkthq9NbycpABHc-zEMad1nahpGixVgP7o/exec";
 
-    // 読み込み完了時にメッセージ一覧を取得
-    document.addEventListener("DOMContentLoaded", loadMessages);
+    // アプリケーションの状態
+    let allMessages = [];       // GASから取得した全てのメッセージ
+    let currentSort = "newest";  // "newest" または "popular"
+    let currentFilter = "all";   // 選択されたジャンルフィルタ
+    let selectedBase64Image = null; // アップロード対象のBase64文字列
+    let selectedImageMeta = {};     // アップロード画像のメタデータ (name, type)
+
+    // 初期化
+    document.addEventListener("DOMContentLoaded", () => {
+      loadMessages();
+      setupEventListeners();
+    });
+
+    function setupEventListeners() {
+      // ソートタブの切り替え
+      document.getElementById('sortNewest').addEventListener('click', () => switchSort("newest"));
+      document.getElementById('sortPopular').addEventListener('click', () => switchSort("popular"));
+
+      // ジャンルフィルタの切り替え
+      document.getElementById('filterCategory').addEventListener('change', (e) => {
+        currentFilter = e.target.value;
+        renderTimeline();
+      });
+
+      // 画像選択時のプレビュー処理
+      const photoInput = document.getElementById('photoInput');
+      const previewContainer = document.getElementById('imagePreviewContainer');
+      
+      photoInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) {
+          selectedBase64Image = null;
+          previewContainer.innerHTML = "";
+          return;
+        }
+
+        // 5MB制限
+        if (file.size > 5 * 1024 * 1024) {
+          alert("画像サイズは5MB以下にしてください。 / Please upload an image under 5MB.");
+          photoInput.value = "";
+          return;
+        }
+
+        selectedImageMeta = { name: file.name, type: file.type };
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          selectedBase64Image = event.target.result;
+          previewContainer.innerHTML = `
+            <div class="preview-item">
+              <img src="${selectedBase64Image}" alt="プレビュー">
+              <button type="button" class="remove-preview-btn" onclick="removeSelectedImage()">✕</button>
+            </div>
+          `;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // 画像削除用ヘルパー (グローバルに公開)
+    window.removeSelectedImage = function() {
+      document.getElementById('photoInput').value = "";
+      document.getElementById('imagePreviewContainer').innerHTML = "";
+      selectedBase64Image = null;
+      selectedImageMeta = {};
+    };
+
+    function switchSort(sortType) {
+      currentSort = sortType;
+      document.getElementById('sortNewest').classList.toggle('active', sortType === 'newest');
+      document.getElementById('sortNewest').setAttribute('aria-selected', sortType === 'newest');
+      document.getElementById('sortPopular').classList.toggle('active', sortType === 'popular');
+      document.getElementById('sortPopular').setAttribute('aria-selected', sortType === 'popular');
+      renderTimeline();
+    }
 
     // ==========================================
-    // 掲示板メッセージの取得 (GET)
+    // データの取得 (GET)
     // ==========================================
     async function loadMessages() {
       const timeline = document.getElementById('messageTimeline');
@@ -227,12 +330,14 @@
           return;
         }
 
-        // GASへGETリクエストを送信
         const response = await fetch(GAS_WEB_APP_URL);
         const result = await response.json();
         
         if (result.status === "success") {
-          displayMessages(result.data);
+          allMessages = result.data || [];
+          updateFilterOptions();
+          updateDatalistOptions();
+          renderTimeline();
         } else {
           timeline.innerHTML = `<div class="error-msg">データの取得に失敗しました。<br><span class="en-text">Failed to retrieve data.</span></div>`;
         }
@@ -242,38 +347,190 @@
       }
     }
 
-    // メッセージのレンダリング
-    function displayMessages(messages) {
+    // ジャンル選択用プルダウン(フィルタ)の動的生成
+    function updateFilterOptions() {
+      const filterSelect = document.getElementById('filterCategory');
+      const currentSelection = filterSelect.value;
+      
+      // ユニークなカテゴリの抽出
+      const categories = [...new Set(allMessages
+        .filter(msg => !msg.parentId && msg.category) // 親投稿のカテゴリのみ
+        .map(msg => msg.category.trim())
+      )];
+
+      filterSelect.innerHTML = `<option value="all">すべてのジャンル / All</option>`;
+      categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat;
+        option.textContent = cat;
+        filterSelect.appendChild(option);
+      });
+
+      // 以前の選択状態を維持
+      if (categories.includes(currentSelection)) {
+        filterSelect.value = currentSelection;
+        currentFilter = currentSelection;
+      } else {
+        filterSelect.value = "all";
+        currentFilter = "all";
+      }
+    }
+
+    // 投稿フォーム用サジェスト候補(datalist)の生成
+    function updateDatalistOptions() {
+      const datalist = document.getElementById('hobbyList');
+      const defaultCategories = ["卓球", "ダンス", "自転車", "キャンピングカー", "プログラミング"];
+      
+      const postedCategories = allMessages
+        .filter(msg => !msg.parentId && msg.category)
+        .map(msg => msg.category.trim());
+      
+      const allUniqueCats = [...new Set([...defaultCategories, ...postedCategories])];
+      
+      datalist.innerHTML = "";
+      allUniqueCats.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat;
+        datalist.appendChild(option);
+      });
+    }
+
+    // タイムラインとスレッドのレンダリング
+    function renderTimeline() {
       const timeline = document.getElementById('messageTimeline');
       
-      if (!messages || messages.length === 0) {
+      // 親メッセージと子メッセージ（返信）に分離
+      const parentMessages = allMessages.filter(msg => !msg.parentId);
+      const childMessages = allMessages.filter(msg => msg.parentId);
+
+      // 親メッセージに対するフィルタリング
+      let filteredParents = parentMessages;
+      if (currentFilter !== "all") {
+        filteredParents = parentMessages.filter(msg => msg.category === currentFilter);
+      }
+
+      // 親メッセージに対するソート
+      if (currentSort === "newest") {
+        filteredParents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      } else if (currentSort === "popular") {
+        filteredParents.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+      }
+
+      if (filteredParents.length === 0) {
         timeline.innerHTML = `
           <div class="empty-state">
-            <p>まだ投稿がありません。最初のメッセージを投稿しましょう！</p>
-            <p class="en-text">No posts yet. Be the first to post a message!</p>
+            <p>投稿が見つかりませんでした。</p>
+            <p class="en-text">No posts found.</p>
           </div>`;
         return;
       }
-      
-      // タイムラインをクリアしてカードを追加
+
       timeline.innerHTML = "";
-      messages.forEach(msg => {
+      filteredParents.forEach(msg => {
         const date = new Date(msg.timestamp);
         const formattedDate = `${date.getFullYear()}/${date.getMonth()+1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
         
-        const card = document.createElement('div');
-        card.className = 'message-card';
-        card.innerHTML = `
+        // 投稿カードを作成
+        const cardWrapper = document.createElement('div');
+        cardWrapper.className = 'message-thread-group';
+        
+        // メイン投稿
+        const mainCard = document.createElement('div');
+        mainCard.className = 'message-card parent-message';
+        mainCard.innerHTML = `
           <div class="message-card-header">
             <span class="message-nickname">${escapeHTML(msg.nickname)}</span>
             <span class="message-category">${escapeHTML(msg.category)}</span>
           </div>
           <p class="message-body">${escapeHTML(msg.comment).replace(/\n/g, '<br>')}</p>
-          <span class="message-time">${formattedDate}</span>
+          
+          ${msg.imageUrl ? `
+            <div class="message-image-wrapper">
+              <a href="${msg.imageUrl}" target="_blank">
+                <img src="${msg.imageUrl}" alt="投稿画像" class="message-posted-img">
+              </a>
+            </div>` : ''}
+
+          <div class="message-card-footer">
+            <span class="message-time">${formattedDate}</span>
+            <div class="action-buttons">
+              <!-- いいねボタン -->
+              <button class="like-btn" onclick="sendLike('${msg.id}', this)">
+                👍 <span class="like-count">${msg.likes || 0}</span>
+              </button>
+              <!-- 返信ボタン -->
+              <button class="reply-toggle-btn" onclick="toggleReplyForm('${msg.id}')">
+                💬 返信する / Reply
+              </button>
+            </div>
+          </div>
+          
+          <!-- 返信フォーム (初期状態は非表示) -->
+          <div id="replyForm-${msg.id}" class="inline-reply-form" style="display: none;">
+            <form onsubmit="submitReply(event, '${msg.id}')">
+              <div class="form-group compact">
+                <input type="text" placeholder="名前 (Nickname)" required class="reply-nickname">
+              </div>
+              <div class="form-group compact">
+                <textarea placeholder="返信内容を入力... (Reply message)" required rows="2" class="reply-comment"></textarea>
+              </div>
+              <button type="submit" class="submit-btn compact">
+                <span>送信 / Send</span>
+              </button>
+            </form>
+          </div>
         `;
-        timeline.appendChild(card);
+        
+        cardWrapper.appendChild(mainCard);
+        
+        // 子メッセージ（返信スレッド）の描画
+        const replies = childMessages.filter(reply => reply.parentId === msg.id);
+        // 返信は古い順（昇順）に並べる
+        replies.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        if (replies.length > 0) {
+          const repliesContainer = document.createElement('div');
+          repliesContainer.className = 'replies-container';
+          
+          replies.forEach(reply => {
+            const rDate = new Date(reply.timestamp);
+            const rFormattedDate = `${rDate.getFullYear()}/${rDate.getMonth()+1}/${rDate.getDate()} ${String(rDate.getHours()).padStart(2, '0')}:${String(rDate.getMinutes()).padStart(2, '0')}`;
+            
+            const replyCard = document.createElement('div');
+            replyCard.className = 'message-card child-message';
+            replyCard.innerHTML = `
+              <div class="message-card-header">
+                <span class="message-nickname">${escapeHTML(reply.nickname)}</span>
+                <span class="message-reply-tag">返信 / Reply</span>
+              </div>
+              <p class="message-body">${escapeHTML(reply.comment).replace(/\n/g, '<br>')}</p>
+              <div class="message-card-footer">
+                <span class="message-time">${rFormattedDate}</span>
+                <div class="action-buttons">
+                  <!-- いいねボタン -->
+                  <button class="like-btn" onclick="sendLike('${reply.id}', this)">
+                    👍 <span class="like-count">${reply.likes || 0}</span>
+                  </button>
+                </div>
+              </div>
+            `;
+            repliesContainer.appendChild(replyCard);
+          });
+          
+          cardWrapper.appendChild(repliesContainer);
+        }
+        
+        timeline.appendChild(cardWrapper);
       });
     }
+
+    // 返信フォームのトグル
+    window.toggleReplyForm = function(parentId) {
+      const form = document.getElementById(`replyForm-${parentId}`);
+      if (form) {
+        form.style.display = form.style.display === "none" ? "block" : "none";
+      }
+    };
 
     // ==========================================
     // 掲示板メッセージの投稿 (POST)
@@ -314,11 +571,14 @@
         action: "postMessage",
         nickname: nicknameInput.value.trim(),
         hobbyCategory: categoryInput.value.trim(),
-        comment: commentInput.value.trim()
+        comment: commentInput.value.trim(),
+        photoData: selectedBase64Image,       // Base64データ (存在する場合)
+        photoName: selectedImageMeta.name || "",
+        photoType: selectedImageMeta.type || ""
       };
       
       try {
-        // GASへデータをPOST送信 (no-corsモード)
+        // GASへデータをPOST送信 (no-cors)
         await fetch(GAS_WEB_APP_URL, {
           method: "POST",
           mode: "no-cors",
@@ -329,9 +589,12 @@
         });
         
         showResponse(responseMessage, "投稿が完了しました！ / Post completed successfully!", "success");
-        document.getElementById('boardForm').reset();
         
-        // 1.5秒後にタイムラインを再読込して最新の状態にする
+        // フォームと写真プレビューをリセット
+        document.getElementById('boardForm').reset();
+        removeSelectedImage();
+        
+        // 1.5秒後にタイムラインを再読込
         setTimeout(loadMessages, 1500);
         
       } catch (error) {
@@ -343,6 +606,103 @@
         btnSpinner.style.display = "none";
       }
     });
+
+    // ==========================================
+    // コメント・返信の投稿 (POST)
+    // ==========================================
+    window.submitReply = async function(event, parentId) {
+      event.preventDefault();
+      
+      const form = event.target;
+      const nicknameInput = form.querySelector('.reply-nickname');
+      const commentInput = form.querySelector('.reply-comment');
+      const submitBtn = form.querySelector('.submit-btn');
+      
+      if (!nicknameInput.value.trim() || !commentInput.value.trim()) {
+        alert("名前と返信内容を入力してください。");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      const originalBtnText = submitBtn.innerHTML;
+      submitBtn.innerHTML = "<span>送信中...</span>";
+      
+      const replyData = {
+        action: "postMessage",
+        parentId: parentId,
+        nickname: nicknameInput.value.trim(),
+        comment: commentInput.value.trim()
+      };
+
+      try {
+        await fetch(GAS_WEB_APP_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "text/plain"
+          },
+          body: JSON.stringify(replyData)
+        });
+
+        // フォーム非表示
+        document.getElementById(`replyForm-${parentId}`).style.display = "none";
+        form.reset();
+        
+        // 1.5秒後に再読込
+        setTimeout(loadMessages, 1500);
+        
+      } catch (error) {
+        console.error("Error posting reply:", error);
+        alert("返信の送信に失敗しました。");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+      }
+    };
+
+    // ==========================================
+    // いいねの送信 (POST)
+    // ==========================================
+    window.sendLike = async function(messageId, btnElement) {
+      if (btnElement.disabled) return;
+      
+      btnElement.disabled = true;
+      const countSpan = btnElement.querySelector('.like-count');
+      const currentCount = parseInt(countSpan.textContent) || 0;
+      
+      // 楽観的UI更新 (ローカルですぐに数値を+1し、クラス付与)
+      countSpan.textContent = currentCount + 1;
+      btnElement.classList.add('liked');
+
+      try {
+        await fetch(GAS_WEB_APP_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "text/plain"
+          },
+          body: JSON.stringify({
+            action: "like",
+            id: messageId
+          })
+        });
+        
+        // ローカルに状態を保存 (二重いいね防止)
+        allMessages = allMessages.map(msg => {
+          if (msg.id === messageId) {
+            return { ...msg, likes: (msg.likes || 0) + 1 };
+          }
+          return msg;
+        });
+        
+      } catch (error) {
+        console.error("Error sending like:", error);
+        // 失敗した場合は元の値に戻す
+        countSpan.textContent = currentCount;
+        btnElement.classList.remove('liked');
+        btnElement.disabled = false;
+      }
+    };
 
     // ==========================================
     // 会員登録の申し込み (POST)
@@ -416,6 +776,7 @@
     }
 
     function escapeHTML(str) {
+      if (!str) return "";
       return str
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")

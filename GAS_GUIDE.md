@@ -1,13 +1,13 @@
-# Google Apps Script (GAS) 連携セットアップガイド（GET/POST両対応版）
+# Google Apps Script (GAS) 連携セットアップガイド（画像投稿・スレッド返信・いいね対応版）
 
-本ガイドでは、GitHub PagesのLPに新設した「交流スペース（掲示板）」の機能を実現するために、メッセージの取得（GET）および投稿・会員登録（POST）の両方に対応した最新のGASバックエンドを構築する手順を説明します。
+本ガイドでは、掲示板機能の高度化（画像投稿、スレッド返信、いいね機能）を実現するために、画像の保存処理やいいね数のインクリメント、スレッド親子構造の管理に対応した最新のGASバックエンドを構築する手順を説明します。
 
 ---
 
-## 🛠️ ステップ 1：Google スプレッドシートの準備
+## 🛠️ ステップ 1：スプレッドシートの準備
 
-1. 以前作成した、あるいは新規の **Google スプレッドシート** を開きます。
-2. シートの1行目の見出し（ヘッダー）を手動で設定する必要はありません。GASの新しいコードが実行時に、必要なシート（`申し込み` と `掲示板`）を**自動作成**し、自動でヘッダー列を追加します。
+- 以前に作成したスプレッドシートを引き続き利用できます。
+- GASコードの実行時に、シート「掲示板」が自動的に新しい構成（列: `ID`、`親ID`、`タイムスタンプ`、`ニックネーム`、`趣味ジャンル`、`一言コメント`、`画像URL`、`いいね数`）で再生成・拡張されます。すでに「掲示板」シートがあり、以前のテストデータが含まれている場合は、古いシートを削除するか、名前を「掲示板_old」に変更しておくと、GASが新規に正しい列のシートを作成します。
 
 ---
 
@@ -15,7 +15,7 @@
 
 1. スプレッドシートのメニューバーから、**「拡張機能」＞「Apps Script」** をクリックします。
 2. エディタに記述されている既存のコードをすべて消去します。
-3. 以下の統合コード（GETおよびPOST分岐対応）をコピーして貼り付けます。
+3. 以下の統合コードをコピーして貼り付けます。
 
 ```javascript
 /**
@@ -33,29 +33,29 @@ function doGet(e) {
     // 「掲示板」シートが存在しない場合は自動で作成
     if (!sheet) {
       sheet = ss.insertSheet("掲示板");
-      sheet.appendRow(["タイムスタンプ", "ニックネーム", "趣味ジャンル", "一言コメント"]);
+      sheet.appendRow(["ID", "親ID", "タイムスタンプ", "ニックネーム", "趣味ジャンル", "一言コメント", "画像URL", "いいね数"]);
     }
     
     var data = [];
     var lastRow = sheet.getLastRow();
     
     if (lastRow > 1) {
-      // 2行目以降の全データを取得
-      var rows = sheet.getRange(2, 1, lastRow - 1, 4).getValues();
-      
-      // 最新の投稿が上に表示されるように、逆順で最大50件分配列に追加
-      var start = Math.max(0, rows.length - 50);
-      for (var i = rows.length - 1; i >= start; i--) {
+      // 全列（8列）を取得 (ID, 親ID, タイムスタンプ, ニックネーム, 趣味ジャンル, 一言コメント, 画像URL, いいね数)
+      var rows = sheet.getRange(2, 1, lastRow - 1, 8).getValues();
+      for (var i = 0; i < rows.length; i++) {
         data.push({
-          timestamp: rows[i][0],
-          nickname: rows[i][1],
-          category: rows[i][2],
-          comment: rows[i][3]
+          id: String(rows[i][0]),
+          parentId: String(rows[i][1]),
+          timestamp: rows[i][2],
+          nickname: rows[i][3],
+          category: rows[i][4],
+          comment: rows[i][5],
+          imageUrl: rows[i][6],
+          likes: Number(rows[i][7] || 0)
         });
       }
     }
     
-    // CORSエラー回避のため、JSONとして返却
     return output.setContent(JSON.stringify({
       status: "success",
       data: data
@@ -70,7 +70,7 @@ function doGet(e) {
 }
 
 /**
- * データの書き込み (POSTリクエスト)
+ * データの書き込み・更新 (POSTリクエスト)
  * @param {Object} e - POSTリクエストイベントオブジェクト
  */
 function doPost(e) {
@@ -87,32 +87,83 @@ function doPost(e) {
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // 処理の分岐 (掲示板のメッセージ投稿)
-    if (params.action === "postMessage") {
+    // ------------------------------------------
+    // 1. いいねの処理 (like)
+    // ------------------------------------------
+    if (params.action === "like") {
+      var id = params.id;
+      if (!id) throw new Error("IDが指定されていません。");
+      
+      var sheet = ss.getSheetByName("掲示板");
+      if (!sheet) throw new Error("掲示板シートが存在しません。");
+      
+      var lastRow = sheet.getLastRow();
+      if (lastRow <= 1) throw new Error("データがありません。");
+      
+      // ID列 (A列) をスキャンして一致する行を特定
+      var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      var foundRow = -1;
+      for (var i = 0; i < ids.length; i++) {
+        if (String(ids[i][0]) === String(id)) {
+          foundRow = i + 2; // ヘッダー行と0から始まるインデックスを加味
+          break;
+        }
+      }
+      
+      if (foundRow === -1) throw new Error("該当する投稿が見つかりません。");
+      
+      // H列 (8列目) のいいね数を取得して+1して再書き込み
+      var likesRange = sheet.getRange(foundRow, 8);
+      var currentLikes = Number(likesRange.getValue() || 0);
+      likesRange.setValue(currentLikes + 1);
+      
+      return output.setContent(JSON.stringify({ 
+        status: "success", 
+        message: "いいねを追加しました。" 
+      }));
+    }
+    
+    // ------------------------------------------
+    // 2. メッセージの投稿 (postMessage)
+    // ------------------------------------------
+    else if (params.action === "postMessage") {
       var sheet = ss.getSheetByName("掲示板");
       if (!sheet) {
         sheet = ss.insertSheet("掲示板");
-        sheet.appendRow(["タイムスタンプ", "ニックネーム", "趣味ジャンル", "一言コメント"]);
+        sheet.appendRow(["ID", "親ID", "タイムスタンプ", "ニックネーム", "趣味ジャンル", "一言コメント", "画像URL", "いいね数"]);
       }
       
+      var parentId = params.parentId || ""; // 親メッセージID (なければ空)
       var nickname = params.nickname;
-      var hobbyCategory = params.hobbyCategory;
+      var hobbyCategory = params.hobbyCategory || ""; // 返信の場合は空になりうる
       var comment = params.comment;
       
-      if (!nickname || !hobbyCategory || !comment) {
-        throw new Error("入力項目が不足しています。");
+      if (!nickname || !comment) {
+        throw new Error("ニックネームまたはコメントが不足しています。");
       }
       
-      // データの追加
-      sheet.appendRow([new Date(), nickname, hobbyCategory, comment]);
+      // 一意なメッセージIDの生成 (タイムスタンプ + ランダム文字列)
+      var messageId = new Date().getTime() + "-" + Math.random().toString(36).substring(2, 8);
+      
+      // 画像のアップロード処理 (親メッセージのみ且つ画像が添付されている場合)
+      var imageUrl = "";
+      if (!parentId && params.photoData) {
+        imageUrl = uploadImageToDrive(params.photoData, params.photoName, params.photoType);
+      }
+      
+      // データの追記 (ID, 親ID, タイムスタンプ, ニックネーム, 趣味ジャンル, 一言コメント, 画像URL, いいね数)
+      sheet.appendRow([messageId, parentId, new Date(), nickname, hobbyCategory, comment, imageUrl, 0]);
       
       return output.setContent(JSON.stringify({ 
         status: "success", 
         message: "メッセージが投稿されました。" 
       }));
-      
-    } else {
-      // 処理の分岐 (メンバーシップ申し込み登録)
+    }
+    
+    // ------------------------------------------
+    // 3. 会員登録の申し込み (register)
+    // ------------------------------------------
+    else {
       var sheet = ss.getSheetByName("申し込み");
       if (!sheet) {
         sheet = ss.insertSheet("申し込み");
@@ -126,7 +177,6 @@ function doPost(e) {
         throw new Error("お名前、またはメールアドレスが入力されていません。");
       }
       
-      // データの追加
       sheet.appendRow([new Date(), name, email]);
       
       return output.setContent(JSON.stringify({ 
@@ -144,6 +194,38 @@ function doPost(e) {
 }
 
 /**
+ * Googleドライブの「LP_Upload_Images」フォルダに画像を保存するヘルパー
+ * @param {string} base64Data - Base64形式の画像データ ("data:image/png;base64,..."等)
+ * @param {string} fileName - 保存するファイル名
+ * @param {string} mimeType - 画像のMIMEタイプ
+ * @return {string} 画像の公開アクセスURL
+ */
+function uploadImageToDrive(base64Data, fileName, mimeType) {
+  var folderName = "LP_Upload_Images";
+  var folders = DriveApp.getFoldersByName(folderName);
+  var folder;
+  
+  // フォルダが存在しない場合は新規作成
+  if (folders.hasNext()) {
+    folder = folders.next();
+  } else {
+    folder = DriveApp.createFolder(folderName);
+  }
+  
+  // Base64データからヘッダー（data:image/png;base64,等）をトリミングしてデコード
+  var base64Image = base64Data.split(",")[1];
+  var decoded = Utilities.base64Decode(base64Image);
+  var blob = Utilities.newBlob(decoded, mimeType, fileName);
+  
+  // ファイルを作成して共有権限を「リンクを知っている全員に閲覧許可」に変更
+  var file = folder.createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  
+  // Webページの<img>タグで直接読み込める形式のURLを生成して返却
+  return "https://drive.google.com/uc?export=view&id=" + file.getId();
+}
+
+/**
  * プリフライトリクエスト (OPTIONS) に対するCORS対応
  */
 function doOptions(e) {
@@ -157,13 +239,13 @@ function doOptions(e) {
 
 ---
 
-## 🛠️ ステップ 3：新しいデプロイとして公開
+## 🛠️ ステップ 3：新バージョンとしてデプロイを更新
 
-GASのコードを更新（`doGet`の追加など）した後は、**既存のデプロイを更新するか、新しいデプロイを作成する**必要があります。デプロイを更新しないと、古いバージョンのコード（申し込み登録のみ）が実行され続けてしまいます。
+GETおよびPOSTの内容に変更が加わったため、必ず新バージョンとしてデプロイを更新します。
 
-1. 画面右上の **「デプロイ」＞「デプロイの管理」** をクリックします。
+1. 右上の **「デプロイ」＞「デプロイの管理」** をクリックします。
 2. 鉛筆マーク（編集）をクリックします。
 3. **バージョン** のドロップダウンメニューから **「新バージョン」** を選択します。
 4. **「デプロイ」** をクリックします。
-5. 更新された「ウェブアプリのURL」をコピーし、念のためLP（`index.html`のGAS_WEB_APP_URL変数）と一致しているか確認します。
-   - URLが変更されている場合は、`index.html` の75行目の定数を新しいURLに書き換えて、GitHubにコミット＆プッシュしてください。
+5. （初回時のみ）Googleドライブ内のファイル作成・共有処理を行うための権限承認ウィンドウが出るので、画面の指示に従ってアクセス権を「許可」します。
+6. コピーしたURLを `index.html` に設定してデプロイを完了させてください。
