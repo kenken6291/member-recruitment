@@ -8,6 +8,9 @@
   
   <!-- CSS Stylesheet -->
   <link rel="stylesheet" href="style.css">
+  
+  <!-- D3.js for Member Network Graph -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 </head>
 <body>
 
@@ -149,10 +152,23 @@
             みんなの交流スペース（掲示板）
             <span class="section-en-title">Community Board</span>
           </h2>
-          <p class="board-subtitle">写真や趣味を投稿して交流しましょう！返信や「いいね」も大歓迎です。</p>
-          <p class="board-subtitle en-text">Share photos and hobbies to connect! Replies and Likes are welcome.</p>
           
-          <div class="board-layout">
+          <!-- タブナビゲーション -->
+          <div class="board-tabs">
+            <button class="board-tab-btn active" id="tabBtnBoard" onclick="switchBoardTab('board')">
+              💬 交流掲示板 / Bulletin Board
+            </button>
+            <button class="board-tab-btn" id="tabBtnGraph" onclick="switchBoardTab('graph')">
+              🕸️ 会員関係図 / Member Graph
+            </button>
+          </div>
+
+          <!-- タブ1: 交流掲示板 -->
+          <div id="tabContentBoard" class="board-tab-content active">
+            <p class="board-subtitle">写真や趣味を投稿して交流しましょう！返信や「いいね」も大歓迎です。</p>
+            <p class="board-subtitle en-text">Share photos and hobbies to connect! Replies and Likes are welcome.</p>
+            
+            <div class="board-layout">
             <!-- 投稿フォーム -->
             <div class="post-form-wrapper">
               <!-- 注意事項・免責事項アコーディオン -->
@@ -252,6 +268,27 @@
                   <span class="loading-spinner"></span>
                   <p>投稿を読み込んでいます... / Loading messages...</p>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- タブ2: 会員関係図 -->
+          <div id="tabContentGraph" class="board-tab-content">
+            <p class="board-subtitle">登録者（会員）同士の趣味の共通性やつながりを視覚的に表現した関係図です。</p>
+            <p class="board-subtitle en-text">A visual network of connections and shared hobbies between members.</p>
+            
+            <div class="graph-container">
+              <div class="graph-header-controls">
+                <div class="graph-legends">
+                  <span class="graph-legend-item"><span class="legend-color me"></span>あなた (You)</span>
+                  <span class="graph-legend-item"><span class="legend-color friend"></span>つながり (Connected)</span>
+                </div>
+                <button type="button" class="graph-reset-btn" onclick="resetGraphView()">📍 表示をリセット / Reset View</button>
+              </div>
+              <div class="graph-canvas-wrapper">
+                <svg id="memberGraph"></svg>
+                <!-- ツールチップ -->
+                <div id="graphTooltip" class="graph-tooltip" style="display: none;"></div>
               </div>
             </div>
           </div>
@@ -593,7 +630,80 @@
         email: "demo@example.com",
         password: "password",
         nickname: "デモユーザー",
-        phone: "+819000000000"
+        phone: "+819000000000",
+        hobbies: ["プログラミング", "卓球"]
+      },
+      "ken@example.com": {
+        uid: "mock-user-alpha",
+        email: "ken@example.com",
+        password: "password",
+        nickname: "卓球好きのケン",
+        phone: "+819011111111",
+        hobbies: ["卓球", "旅行"]
+      },
+      "queen@example.com": {
+        uid: "mock-user-beta",
+        email: "queen@example.com",
+        password: "password",
+        nickname: "ダンシングクイーン",
+        phone: "+819022222222",
+        hobbies: ["ダンス", "旅行"]
+      },
+      "camp@example.com": {
+        uid: "mock-user-gamma",
+        email: "camp@example.com",
+        password: "password",
+        nickname: "アウトドア野郎",
+        phone: "+819033333333",
+        hobbies: ["自転車キャンプ", "DIY"]
+      },
+      "diy_meister@example.com": {
+        uid: "mock-user-delta",
+        email: "diy_meister@example.com",
+        password: "password",
+        nickname: "DIYマイスター",
+        phone: "+819044444444",
+        hobbies: ["DIY", "プログラミング"]
+      },
+      "traveler@example.com": {
+        uid: "mock-user-epsilon",
+        email: "traveler@example.com",
+        password: "password",
+        nickname: "ふらっと旅人",
+        phone: "+819055555555",
+        hobbies: ["旅行", "カメラ"]
+      },
+      "camera_grandma@example.com": {
+        uid: "mock-user-zeta",
+        email: "camera_grandma@example.com",
+        password: "password",
+        nickname: "カメラばぁば",
+        phone: "+819066666666",
+        hobbies: ["カメラ", "卓球"]
+      },
+      "gardening@example.com": {
+        uid: "mock-user-eta",
+        email: "gardening@example.com",
+        password: "password",
+        nickname: "園芸パパ",
+        phone: "+819077777777",
+        hobbies: ["ガーデニング", "DIY"]
+      },
+      "cook@example.com": {
+        uid: "mock-user-theta",
+        email: "cook@example.com",
+        password: "password",
+        nickname: "お料理マイスター",
+        phone: "+819088888888",
+        hobbies: ["料理", "旅行"]
+      },
+      "music_grandpa@example.com": {
+        uid: "mock-user-iota",
+        email: "music_grandpa@example.com",
+        password: "password",
+        nickname: "音楽じぃじ",
+        phone: "+819099999999",
+        hobbies: ["音楽", "プログラミング"]
       }
     };
 
@@ -602,7 +712,7 @@
       if (!localStorage.getItem("mock_posts")) {
         localStorage.setItem("mock_posts", JSON.stringify(DEFAULT_MOCK_POSTS));
       }
-      if (!localStorage.getItem("mock_users")) {
+      if (!localStorage.getItem("mock_users") || !JSON.parse(localStorage.getItem("mock_users"))["ken@example.com"]) {
         localStorage.setItem("mock_users", JSON.stringify(DEFAULT_MOCK_USERS));
       }
     }
@@ -1226,6 +1336,11 @@
         updateFilterOptions();
         updateDatalistOptions();
         renderTimeline();
+
+        // 関係図が表示中なら再描画
+        if (document.getElementById("tabContentGraph").classList.contains("active")) {
+          renderMemberGraph();
+        }
       }, (error) => {
         console.error("Firestore loading error:", error);
         timeline.innerHTML = `<div class="error-msg">データの同期中にエラーが発生しました。</div>`;
@@ -1238,6 +1353,401 @@
       updateFilterOptions();
       updateDatalistOptions();
       renderTimeline();
+
+      // 関係図が表示中なら再描画
+      if (document.getElementById("tabContentGraph").classList.contains("active")) {
+        renderMemberGraph();
+      }
+    }
+
+    // ==========================================
+    // 会員関係図（ネットワークグラフ）描画ロジック
+    // ==========================================
+    let graphSimulation = null;
+
+    window.switchBoardTab = function(tabName) {
+      const tabBtnBoard = document.getElementById("tabBtnBoard");
+      const tabBtnGraph = document.getElementById("tabBtnGraph");
+      const tabContentBoard = document.getElementById("tabContentBoard");
+      const tabContentGraph = document.getElementById("tabContentGraph");
+
+      if (tabName === 'board') {
+        tabBtnBoard.classList.add('active');
+        tabBtnGraph.classList.remove('active');
+        tabContentBoard.classList.add('active');
+        tabContentGraph.classList.remove('active');
+      } else if (tabName === 'graph') {
+        tabBtnBoard.classList.remove('active');
+        tabBtnGraph.classList.add('active');
+        tabContentBoard.classList.remove('active');
+        tabContentGraph.classList.add('active');
+        renderMemberGraph();
+      }
+    };
+
+    async function getGraphData() {
+      const meId = currentUserProfile ? currentUserProfile.uid : 'me';
+      const meNickname = currentUserProfile ? currentUserProfile.nickname : 'あなた';
+      const meHobbies = currentUserProfile ? (currentUserProfile.hobbies || []) : [];
+      
+      const nodes = [];
+      const edges = [];
+      const userMap = new Map();
+
+      // 自分を追加
+      const meNode = { 
+        id: meId, 
+        label: meNickname, 
+        isMe: true, 
+        hobbies: [...meHobbies], 
+        postsCount: 0 
+      };
+      nodes.push(meNode);
+      userMap.set(meId, meNode);
+
+      if (isMockMode) {
+        const mockUsers = JSON.parse(localStorage.getItem("mock_users") || "{}");
+        
+        Object.keys(mockUsers).forEach(email => {
+          const user = mockUsers[email];
+          if (user.uid === meId) {
+            meNode.hobbies = user.hobbies || [];
+            return;
+          }
+          const node = {
+            id: user.uid,
+            label: user.nickname,
+            isMe: false,
+            hobbies: user.hobbies || [],
+            postsCount: 0
+          };
+          nodes.push(node);
+          userMap.set(user.uid, node);
+        });
+
+        // 投稿データから追加の趣味と投稿数の算出
+        const messages = allMessages;
+        messages.forEach(msg => {
+          const uNode = userMap.get(msg.uid);
+          if (uNode) {
+            uNode.postsCount++;
+            if (msg.category && !uNode.hobbies.includes(msg.category)) {
+              uNode.hobbies.push(msg.category);
+            }
+          }
+          if (msg.replies) {
+            msg.replies.forEach(rep => {
+              const rNode = userMap.get(rep.uid);
+              if (rNode) {
+                rNode.postsCount++;
+                if (rep.category && !rNode.hobbies.includes(rep.category)) {
+                  rNode.hobbies.push(rep.category);
+                }
+              }
+            });
+          }
+        });
+
+        // 共通の趣味に基づくエッジの構築
+        for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) {
+            const u1 = nodes[i];
+            const u2 = nodes[j];
+            const common = u1.hobbies.filter(h => u2.hobbies.includes(h));
+            if (common.length > 0) {
+              edges.push({
+                source: u1.id,
+                target: u2.id,
+                type: 'hobby'
+              });
+            }
+          }
+        }
+
+        // コミュニケーションに基づくエッジの構築
+        const connectedPairs = new Set();
+        const getPairKey = (id1, id2) => [id1, id2].sort().join('-');
+
+        messages.forEach(msg => {
+          const threadParticipants = new Set();
+          if (msg.uid) threadParticipants.add(msg.uid);
+          if (msg.replies) {
+            msg.replies.forEach(rep => {
+              if (rep.uid) threadParticipants.add(rep.uid);
+            });
+          }
+
+          const participants = Array.from(threadParticipants);
+          for (let i = 0; i < participants.length; i++) {
+            for (let j = i + 1; j < participants.length; j++) {
+              const p1 = participants[i];
+              const p2 = participants[j];
+              const pairKey = getPairKey(p1, p2);
+              if (!connectedPairs.has(pairKey)) {
+                connectedPairs.add(pairKey);
+                const exists = edges.some(e => 
+                  (e.source === p1 && e.target === p2) || (e.source === p2 && e.target === p1)
+                );
+                if (!exists) {
+                  edges.push({
+                    source: p1,
+                    target: p2,
+                    type: 'chat'
+                  });
+                }
+              }
+            }
+          }
+        });
+      } else {
+        // 本番モード (Firestore から取得)
+        try {
+          const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+          const usersSnapshot = await getDocs(collection(db, "users"));
+          usersSnapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            const uid = docSnap.id;
+            if (uid === meId) {
+              meNode.hobbies = data.hobbies || [];
+              return;
+            }
+            const node = {
+              id: uid,
+              label: data.nickname || "名無し会員",
+              isMe: false,
+              hobbies: data.hobbies || [],
+              postsCount: 0
+            };
+            nodes.push(node);
+            userMap.set(uid, node);
+          });
+
+          // 投稿数と追加の趣味の反映
+          const postsSnapshot = await getDocs(collection(db, "posts"));
+          postsSnapshot.forEach(docSnap => {
+            const post = docSnap.data();
+            const uNode = userMap.get(post.uid);
+            if (uNode) {
+              uNode.postsCount++;
+              if (post.category && !uNode.hobbies.includes(post.category)) {
+                uNode.hobbies.push(post.category);
+              }
+            }
+            if (post.replies) {
+              post.replies.forEach(rep => {
+                const rNode = userMap.get(rep.uid);
+                if (rNode) {
+                  rNode.postsCount++;
+                  if (rep.category && !rNode.hobbies.includes(rep.category)) {
+                    rNode.hobbies.push(rep.category);
+                  }
+                }
+              });
+            }
+          });
+
+          // 共通の趣味に基づくエッジ
+          for (let i = 0; i < nodes.length; i++) {
+            for (let j = i + 1; j < nodes.length; j++) {
+              const u1 = nodes[i];
+              const u2 = nodes[j];
+              const common = u1.hobbies.filter(h => u2.hobbies.includes(h));
+              if (common.length > 0) {
+                edges.push({ source: u1.id, target: u2.id, type: 'hobby' });
+              }
+            }
+          }
+
+          // コミュニケーションに基づくエッジ
+          const connectedPairs = new Set();
+          const getPairKey = (id1, id2) => [id1, id2].sort().join('-');
+
+          postsSnapshot.forEach(docSnap => {
+            const post = docSnap.data();
+            const threadParticipants = new Set();
+            if (post.uid) threadParticipants.add(post.uid);
+            if (post.replies) {
+              post.replies.forEach(rep => {
+                if (rep.uid) threadParticipants.add(rep.uid);
+              });
+            }
+
+            const participants = Array.from(threadParticipants);
+            for (let i = 0; i < participants.length; i++) {
+              for (let j = i + 1; j < participants.length; j++) {
+                const p1 = participants[i];
+                const p2 = participants[j];
+                const pairKey = getPairKey(p1, p2);
+                if (!connectedPairs.has(pairKey)) {
+                  connectedPairs.add(pairKey);
+                  const exists = edges.some(e => 
+                    (e.source === p1 && e.target === p2) || (e.source === p2 && e.target === p1)
+                  );
+                  if (!exists) {
+                    edges.push({ source: p1, target: p2, type: 'chat' });
+                  }
+                }
+              }
+            }
+          });
+        } catch (err) {
+          console.error("Firestoreから会員情報の取得に失敗しました:", err);
+        }
+      }
+
+      return { nodes, edges };
+    }
+
+    async function renderMemberGraph() {
+      const container = document.querySelector(".graph-canvas-wrapper");
+      if (!container) return;
+
+      const width = container.clientWidth;
+      const height = 500;
+
+      const svg = d3.select("#memberGraph");
+      svg.attr("width", "100%")
+         .attr("height", height)
+         .attr("viewBox", `0 0 ${width} ${height}`);
+
+      svg.selectAll("*").remove();
+
+      const data = await getGraphData();
+      if (!data.nodes || data.nodes.length === 0) return;
+
+      const g = svg.append("g").attr("class", "graph-content");
+      
+      const zoom = d3.zoom()
+        .scaleExtent([0.1, 4])
+        .on("zoom", (event) => {
+          g.attr("transform", event.transform);
+        });
+
+      svg.call(zoom);
+
+      window.resetGraphView = function() {
+        svg.transition().duration(750).call(
+          zoom.transform,
+          d3.zoomIdentity.translate(0, 0).scale(1)
+        );
+      };
+
+      const simulation = d3.forceSimulation(data.nodes)
+        .force("link", d3.forceLink(data.edges).id(d => d.id).distance(130))
+        .force("charge", d3.forceManyBody().strength(-220))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collision", d3.forceCollide().radius(45));
+
+      graphSimulation = simulation;
+
+      const link = g.append("g")
+        .attr("class", "links")
+        .selectAll("line")
+        .data(data.edges)
+        .enter().append("line")
+        .attr("stroke", "rgba(255, 255, 255, 0.15)")
+        .attr("stroke-width", 1.5);
+
+      const node = g.append("g")
+        .attr("class", "nodes")
+        .selectAll(".node")
+        .data(data.nodes)
+        .enter().append("g")
+        .attr("class", d => `node ${d.isMe ? 'node-me' : ''}`)
+        .call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended)
+        );
+
+      node.append("circle")
+        .attr("r", d => d.isMe ? 18 : 12)
+        .attr("fill", d => d.isMe ? "#3b82f6" : "#8b5cf6")
+        .attr("stroke", "rgba(255, 255, 255, 0.2)")
+        .attr("stroke-width", 2);
+
+      node.append("text")
+        .attr("dy", d => d.isMe ? 28 : 22)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#e2e8f0")
+        .attr("font-size", d => d.isMe ? "0.85rem" : "0.75rem")
+        .attr("font-weight", d => d.isMe ? "bold" : "normal")
+        .text(d => d.label);
+
+      const tooltip = d3.select("#graphTooltip");
+
+      node.on("mouseover", function(event, d) {
+        const connectedNodeIds = new Set();
+        connectedNodeIds.add(d.id);
+        
+        data.edges.forEach(edge => {
+          if (edge.source.id === d.id) {
+            connectedNodeIds.add(edge.target.id);
+          } else if (edge.target.id === d.id) {
+            connectedNodeIds.add(edge.source.id);
+          }
+        });
+
+        node.style("opacity", n => connectedNodeIds.has(n.id) ? 1.0 : 0.15);
+        link.style("stroke-opacity", e => (e.source.id === d.id || e.target.id === d.id) ? 1.0 : 0.05)
+            .style("stroke", e => (e.source.id === d.id || e.target.id === d.id) ? "#3b82f6" : "rgba(255, 255, 255, 0.15)");
+
+        const hobbiesStr = d.hobbies && d.hobbies.length > 0 ? d.hobbies.join(", ") : "未設定";
+        tooltip.style("display", "block")
+          .html(`
+            <div class="tooltip-title">${d.label} ${d.isMe ? '<span class="tooltip-badge">あなた</span>' : ''}</div>
+            <div class="tooltip-meta">趣味: ${hobbiesStr}</div>
+            <div class="tooltip-meta">投稿・返信数: ${d.postsCount || 0}回</div>
+          `);
+        
+        updateTooltipPosition(event);
+      })
+      .on("mousemove", function(event) {
+        updateTooltipPosition(event);
+      })
+      .on("mouseout", function() {
+        node.style("opacity", 1.0);
+        link.style("stroke-opacity", 1.0)
+            .style("stroke", "rgba(255, 255, 255, 0.15)");
+        tooltip.style("display", "none");
+      });
+
+      function updateTooltipPosition(event) {
+        const wrapperRect = container.getBoundingClientRect();
+        const x = event.clientX - wrapperRect.left + 15;
+        const y = event.clientY - wrapperRect.top + 15;
+        tooltip.style("left", `${x}px`).style("top", `${y}px`);
+      }
+
+      simulation.on("tick", () => {
+        link
+          .attr("x1", d => d.source.x)
+          .attr("y1", d => d.source.y)
+          .attr("x2", d => d.target.x)
+          .attr("y2", d => d.target.y);
+
+        node
+          .attr("transform", d => `translate(${d.x}, ${d.y})`);
+      });
+
+      function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      }
+
+      // ドラッグ時の追従処理
+      function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+      }
+
+      // 手を離した際にゆっくり収束
+      function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      }
     }
 
     // ==========================================

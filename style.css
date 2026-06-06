@@ -1771,3 +1771,231 @@ footer {
   to { transform: scale(1); opacity: 1; }
 }
 
+/* ==========================================
+   タブUI関連スタイル (掲示板 / 関係図)
+   ========================================== */
+.board-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 20px 0;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.08);
+  padding-bottom: 8px;
+}
+
+.board-tab-btn {
+  background: transparent;
+  border: none;
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--light-text);
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  position: relative;
+}
+
+.board-tab-btn:hover {
+  color: var(--primary);
+  background: var(--primary-glow);
+}
+
+.board-tab-btn.active {
+  color: var(--primary);
+  background: var(--primary-glow);
+}
+
+.board-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--primary);
+  border-radius: 2px;
+}
+
+/* タブコンテンツ表示制御 */
+.board-tab-content {
+  display: none;
+  animation: fadeIn 0.4s ease;
+}
+
+.board-tab-content.active {
+  display: block;
+}
+
+/* ==========================================
+   会員関係図 (ネットワークグラフ) スタイル (Obsidian風ダーク)
+   ========================================== */
+.graph-container {
+  background: #121214;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--border-radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-lg);
+  margin-top: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.graph-header-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.graph-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #a0aec0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-color.me {
+  background: #3b82f6; /* ネオンブルー */
+  box-shadow: 0 0 8px #3b82f6;
+}
+
+.legend-color.friend {
+  background: #8b5cf6; /* パープル */
+  box-shadow: 0 0 8px #8b5cf6;
+}
+
+.graph-reset-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  padding: 8px 16px;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.graph-reset-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.graph-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  height: 500px;
+  background: #09090b; /* Obsidian風極暗背景 */
+  border-radius: var(--border-radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: grab;
+}
+
+.graph-canvas-wrapper:active {
+  cursor: grabbing;
+}
+
+#memberGraph {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* SVGノード・エッジの装飾 */
+.node circle {
+  cursor: pointer;
+  transition: r 0.2s ease, filter 0.2s ease;
+}
+
+.node:hover circle {
+  filter: brightness(1.2) drop-shadow(0 0 6px rgba(255,255,255,0.4));
+}
+
+.node-me circle {
+  fill: #3b82f6 !important;
+  stroke: #60a5fa !important;
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+}
+
+.node-me:hover circle {
+  filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.9)) brightness(1.1);
+}
+
+.node text {
+  pointer-events: none;
+  font-family: var(--font-body);
+  user-select: none;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.links line {
+  stroke-dasharray: 2, 2;
+  animation: dash 30s linear infinite;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -1000;
+  }
+}
+
+/* ツールチップスタイル */
+.graph-tooltip {
+  position: absolute;
+  background: rgba(18, 18, 20, 0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--border-radius-sm);
+  padding: 12px 16px;
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  max-width: 240px;
+  animation: fadeIn 0.2s ease;
+  text-align: left;
+}
+
+.tooltip-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #ffffff;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tooltip-badge {
+  background: #3b82f6;
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.tooltip-meta {
+  font-size: 0.8rem;
+  color: #a0aec0;
+  margin-top: 4px;
+}
+
+
