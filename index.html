@@ -11,113 +11,10 @@
 </head>
 <body>
 
-  <!-- 認証コンテナ (未ログイン時に表示) -->
-  <div id="authContainer" class="auth-container" style="display: none;">
-    <div class="auth-card">
-      <div class="auth-logo">60代はやりたい放題 <span class="auth-logo-en">/ Wild at 60s</span></div>
-      
-      <!-- ログインカード -->
-      <div id="loginCard" class="auth-subcard">
-        <h2>ログイン <span class="section-en-title">Login</span></h2>
-        <form id="loginForm" novalidate>
-          <div class="form-group">
-            <label for="loginEmail">メールアドレス <span class="en-label">/ Email</span></label>
-            <input type="email" id="loginEmail" required placeholder="example@email.com">
-          </div>
-          <div class="form-group">
-            <label for="loginPassword">パスワード <span class="en-label">/ Password</span></label>
-            <input type="password" id="loginPassword" required placeholder="パスワードを入力">
-          </div>
-          <button type="submit" class="submit-btn" id="loginSubmitBtn">
-            <span class="spinner auth-spinner" id="loginSpinner" style="display: none;"></span>
-            <span id="loginBtnText">ログイン / Login</span>
-          </button>
-        </form>
-        <div class="auth-links">
-          <a href="#" id="toSignupBtn">新規会員登録はこちら / Sign Up</a>
-          <a href="#" id="toResetBtn">パスワードを忘れた方はこちら / Forgot Password?</a>
-        </div>
-      </div>
 
-      <!-- 新規登録カード -->
-      <div id="signupCard" class="auth-subcard" style="display: none;">
-        <h2>新規会員登録 <span class="section-en-title">Sign Up</span></h2>
-        <form id="signupForm" novalidate>
-          <div class="form-group">
-            <label for="signupNickname">ニックネーム <span class="en-label">/ Nickname (Required)</span></label>
-            <input type="text" id="signupNickname" required placeholder="例: タロウ">
-          </div>
-          <div class="form-group">
-            <label for="signupEmail">メールアドレス <span class="en-label">/ Email</span></label>
-            <input type="email" id="signupEmail" required placeholder="example@email.com">
-          </div>
-          <div class="form-group">
-            <label for="signupPassword">パスワード <span class="en-label">/ Password (Min 6 chars)</span></label>
-            <input type="password" id="signupPassword" required placeholder="6文字以上で入力">
-          </div>
-          <div class="form-group">
-            <label for="signupPhone">携帯電話番号 <span class="en-label">/ Mobile Phone (SMS Verification)</span></label>
-            <input type="tel" id="signupPhone" required placeholder="09012345678 (ハイフンなし)">
-            <p class="input-help-text">※SMSで6桁の認証コードが送信されます。日本の携帯番号を入力してください。</p>
-          </div>
-          
-          <!-- reCAPTCHAコンテナ (Firebase電話番号認証に必要) -->
-          <div id="recaptcha-container"></div>
-          
-          <button type="submit" class="submit-btn" id="signupSubmitBtn">
-            <span class="spinner auth-spinner" id="signupSpinner" style="display: none;"></span>
-            <span id="signupBtnText">SMS認証コードを送信 / Send Code</span>
-          </button>
-        </form>
-        <div class="auth-links">
-          <a href="#" id="toLoginBtn">ログイン画面へ戻る / Back to Login</a>
-        </div>
-      </div>
 
-      <!-- SMSコード検証カード -->
-      <div id="smsVerifyCard" class="auth-subcard" style="display: none;">
-        <h2>SMS本人確認 <span class="section-en-title">SMS Verification</span></h2>
-        <p class="sms-instructions">携帯電話（<span id="verifyPhoneDisplay"></span>）宛てに6桁の認証コードを送信しました。コードを入力してください。</p>
-        <form id="smsVerifyForm" novalidate>
-          <div class="form-group">
-            <label for="verificationCode">認証コード <span class="en-label">/ 6-Digit Code</span></label>
-            <input type="text" id="verificationCode" required placeholder="123456" maxlength="6" pattern="\d{6}">
-          </div>
-          <button type="submit" class="submit-btn" id="smsSubmitBtn">
-            <span class="spinner auth-spinner" id="smsSpinner" style="display: none;"></span>
-            <span id="smsBtnText">認証して登録完了 / Verify & Complete</span>
-          </button>
-        </form>
-        <div class="auth-links">
-          <a href="#" id="cancelSmsBtn">キャンセルして戻る / Cancel</a>
-        </div>
-      </div>
-
-      <!-- パスワードリセットカード -->
-      <div id="resetCard" class="auth-subcard" style="display: none;">
-        <h2>パスワード再設定 <span class="section-en-title">Reset Password</span></h2>
-        <p class="reset-instructions">登録されているメールアドレスを入力してください。パスワード再設定用のメールを送信します。</p>
-        <form id="resetForm" novalidate>
-          <div class="form-group">
-            <label for="resetEmail">メールアドレス <span class="en-label">/ Email Address</span></label>
-            <input type="email" id="resetEmail" required placeholder="example@email.com">
-          </div>
-          <button type="submit" class="submit-btn" id="resetSubmitBtn">
-            <span class="spinner auth-spinner" id="resetSpinner" style="display: none;"></span>
-            <span id="resetBtnText">リセットメールを送信 / Send Reset Email</span>
-          </button>
-        </form>
-        <div class="auth-links">
-          <a href="#" id="resetToLoginBtn">ログイン画面へ戻る / Back to Login</a>
-        </div>
-      </div>
-
-      <div id="authResponseMessage" class="message-box" role="alert" aria-live="polite"></div>
-    </div>
-  </div>
-
-  <!-- アプリメインコンテナ (ログイン済みの時に表示) -->
-  <div id="appContainer" style="display: none;">
+  <!-- アプリメインコンテナ (掲示板より上は常時表示、掲示板以降はログイン制御) -->
+  <div id="appContainer">
     <!-- フローティングヘッダーナビゲーション -->
     <nav class="navbar" id="mainNavbar">
       <div class="navbar-container">
@@ -247,7 +144,7 @@
 
       <!-- 交流スペース（掲示板）セクション -->
       <section id="message-board" class="board-section">
-        <div class="board-container">
+        <div class="board-container" id="boardContent">
           <h2>
             みんなの交流スペース（掲示板）
             <span class="section-en-title">Community Board</span>
@@ -357,6 +254,111 @@
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- 認証コンテナ (未ログイン時に掲示板エリアに表示) -->
+        <div id="authContainer" class="auth-container" style="display: none;">
+          <div class="auth-card">
+            <div class="auth-logo">60代はやりたい放題 <span class="auth-logo-en">/ Wild at 60s</span></div>
+            
+            <!-- ログインカード -->
+            <div id="loginCard" class="auth-subcard">
+              <h2>ログイン <span class="section-en-title">Login</span></h2>
+              <form id="loginForm" novalidate>
+                <div class="form-group">
+                  <label for="loginEmail">メールアドレス <span class="en-label">/ Email</span></label>
+                  <input type="email" id="loginEmail" required placeholder="example@email.com">
+                </div>
+                <div class="form-group">
+                  <label for="loginPassword">パスワード <span class="en-label">/ Password</span></label>
+                  <input type="password" id="loginPassword" required placeholder="パスワードを入力">
+                </div>
+                <button type="submit" class="submit-btn" id="loginSubmitBtn">
+                  <span class="spinner auth-spinner" id="loginSpinner" style="display: none;"></span>
+                  <span id="loginBtnText">ログイン / Login</span>
+                </button>
+              </form>
+              <div class="auth-links">
+                <a href="#" id="toSignupBtn">新規会員登録はこちら / Sign Up</a>
+                <a href="#" id="toResetBtn">パスワードを忘れた方はこちら / Forgot Password?</a>
+              </div>
+            </div>
+
+            <!-- 新規登録カード -->
+            <div id="signupCard" class="auth-subcard" style="display: none;">
+              <h2>新規会員登録 <span class="section-en-title">Sign Up</span></h2>
+              <form id="signupForm" novalidate>
+                <div class="form-group">
+                  <label for="signupNickname">ニックネーム <span class="en-label">/ Nickname (Required)</span></label>
+                  <input type="text" id="signupNickname" required placeholder="例: タロウ">
+                </div>
+                <div class="form-group">
+                  <label for="signupEmail">メールアドレス <span class="en-label">/ Email</span></label>
+                  <input type="email" id="signupEmail" required placeholder="example@email.com">
+                </div>
+                <div class="form-group">
+                  <label for="signupPassword">パスワード <span class="en-label">/ Password (Min 6 chars)</span></label>
+                  <input type="password" id="signupPassword" required placeholder="6文字以上で入力">
+                </div>
+                <div class="form-group">
+                  <label for="signupPhone">携帯電話番号 <span class="en-label">/ Mobile Phone (SMS Verification)</span></label>
+                  <input type="tel" id="signupPhone" required placeholder="09012345678 (ハイフンなし)">
+                  <p class="input-help-text">※SMSで6桁の認証コードが送信されます。日本の携帯番号を入力してください。</p>
+                </div>
+                
+                <!-- reCAPTCHAコンテナ (Firebase電話番号認証に必要) -->
+                <div id="recaptcha-container"></div>
+                
+                <button type="submit" class="submit-btn" id="signupSubmitBtn">
+                  <span class="spinner auth-spinner" id="signupSpinner" style="display: none;"></span>
+                  <span id="signupBtnText">SMS認証コードを送信 / Send Code</span>
+                </button>
+              </form>
+              <div class="auth-links">
+                <a href="#" id="toLoginBtn">ログイン画面へ戻る / Back to Login</a>
+              </div>
+            </div>
+
+            <!-- SMSコード検証カード -->
+            <div id="smsVerifyCard" class="auth-subcard" style="display: none;">
+              <h2>SMS本人確認 <span class="section-en-title">SMS Verification</span></h2>
+              <p class="sms-instructions">携帯電話（<span id="verifyPhoneDisplay"></span>）宛てに6桁の認証コードを送信しました。コードを入力してください。</p>
+              <form id="smsVerifyForm" novalidate>
+                <div class="form-group">
+                  <label for="verificationCode">認証コード <span class="en-label">/ 6-Digit Code</span></label>
+                  <input type="text" id="verificationCode" required placeholder="123456" maxlength="6" pattern="\d{6}">
+                </div>
+                <button type="submit" class="submit-btn" id="smsSubmitBtn">
+                  <span class="spinner auth-spinner" id="smsSpinner" style="display: none;"></span>
+                  <span id="smsBtnText">認証して登録完了 / Verify & Complete</span>
+                </button>
+              </form>
+              <div class="auth-links">
+                <a href="#" id="cancelSmsBtn">キャンセルして戻る / Cancel</a>
+              </div>
+            </div>
+
+            <!-- パスワードリセットカード -->
+            <div id="resetCard" class="auth-subcard" style="display: none;">
+              <h2>パスワード再設定 <span class="section-en-title">Reset Password</span></h2>
+              <p class="reset-instructions">登録されているメールアドレスを入力してください。パスワード再設定用のメールを送信します。</p>
+              <form id="resetForm" novalidate>
+                <div class="form-group">
+                  <label for="resetEmail">メールアドレス <span class="en-label">/ Email Address</span></label>
+                  <input type="email" id="resetEmail" required placeholder="example@email.com">
+                </div>
+                <button type="submit" class="submit-btn" id="resetSubmitBtn">
+                  <span class="spinner auth-spinner" id="resetSpinner" style="display: none;"></span>
+                  <span id="resetBtnText">リセットメールを送信 / Send Reset Email</span>
+                </button>
+              </form>
+              <div class="auth-links">
+                <a href="#" id="resetToLoginBtn">ログイン画面へ戻る / Back to Login</a>
+              </div>
+            </div>
+
+            <div id="authResponseMessage" class="message-box" role="alert" aria-live="polite"></div>
           </div>
         </div>
       </section>
@@ -581,19 +583,37 @@
     // ==========================================
     function checkMockAuth() {
       const loggedInUserStr = sessionStorage.getItem("mock_logged_in_user");
+      const logoutBtn = document.getElementById("logoutBtn");
       if (loggedInUserStr) {
         const mockUser = JSON.parse(loggedInUserStr);
         currentUserProfile = mockUser;
         
         document.getElementById("boardUserNickname").textContent = currentUserProfile.nickname;
+        
+        // 表示切り替え
         authContainer.style.display = "none";
-        appContainer.style.display = "block";
+        document.getElementById("boardContent").style.display = "block";
+        document.getElementById("join-form").style.display = "block";
+        
+        // ヘッダーボタン切り替え (ログアウト用)
+        logoutBtn.style.background = "var(--error)";
+        logoutBtn.innerHTML = 'ログアウト <span class="nav-link-en">/ Logout</span>';
+        logoutBtn.href = "#";
         
         subscribeToMessages();
       } else {
         currentUserProfile = null;
-        appContainer.style.display = "none";
+        
+        // 表示切り替え
+        document.getElementById("boardContent").style.display = "none";
+        document.getElementById("join-form").style.display = "none";
         authContainer.style.display = "flex";
+        
+        // ヘッダーボタン切り替え (ログイン用)
+        logoutBtn.style.background = "var(--primary)";
+        logoutBtn.innerHTML = 'ログイン <span class="nav-link-en">/ Login</span>';
+        logoutBtn.href = "#message-board";
+        
         resetAuthFormsLoading();
         showCard("loginCard");
       }
@@ -603,6 +623,7 @@
       checkMockAuth();
     } else {
       onAuthStateChanged(auth, async (user) => {
+        const logoutBtn = document.getElementById("logoutBtn");
         if (user) {
           try {
             const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -610,8 +631,16 @@
               currentUserProfile = userDoc.data();
               
               document.getElementById("boardUserNickname").textContent = currentUserProfile.nickname;
+              
+              // 表示切り替え
               authContainer.style.display = "none";
-              appContainer.style.display = "block";
+              document.getElementById("boardContent").style.display = "block";
+              document.getElementById("join-form").style.display = "block";
+              
+              // ヘッダーボタン切り替え (ログアウト用)
+              logoutBtn.style.background = "var(--error)";
+              logoutBtn.innerHTML = 'ログアウト <span class="nav-link-en">/ Logout</span>';
+              logoutBtn.href = "#";
               
               subscribeToMessages();
             } else {
@@ -624,8 +653,17 @@
           }
         } else {
           currentUserProfile = null;
-          appContainer.style.display = "none";
+          
+          // 表示切り替え
+          document.getElementById("boardContent").style.display = "none";
+          document.getElementById("join-form").style.display = "none";
           authContainer.style.display = "flex";
+          
+          // ヘッダーボタン切り替え (ログイン用)
+          logoutBtn.style.background = "var(--primary)";
+          logoutBtn.innerHTML = 'ログイン <span class="nav-link-en">/ Login</span>';
+          logoutBtn.href = "#message-board";
+          
           resetAuthFormsLoading();
           showCard("loginCard");
         }
@@ -656,6 +694,7 @@
           const user = users[email];
           if (user && user.password === password) {
             sessionStorage.setItem("mock_logged_in_user", JSON.stringify(user));
+            setLoadingState(submitBtn, spinner, btnText, false, "ログイン / Login");
             checkMockAuth();
           } else {
             showAuthResponse("メールアドレスまたはパスワードが正しくありません。(デモ用: demo@example.com / password)", "error");
@@ -665,6 +704,7 @@
       } else {
         try {
           await signInWithEmailAndPassword(auth, email, password);
+          setLoadingState(submitBtn, spinner, btnText, false, "ログイン / Login");
         } catch (error) {
           console.error("Login error:", error);
           let errorMsg = "ログインに失敗しました。";
@@ -739,6 +779,7 @@
 
           document.getElementById("verifyPhoneDisplay").textContent = phone;
           showCard("smsVerifyCard");
+          setLoadingState(submitBtn, spinner, btnText, false, "SMS認証コードを送信 / Send Code");
         } catch (error) {
           console.error("SMS Send error:", error);
           let errorMsg = "SMS送信に失敗しました。電話番号が正しいかご確認ください。";
@@ -793,6 +834,7 @@
             showAuthResponse("会員登録が完了しました！ログイン中...", "success");
             
             setTimeout(() => {
+              setLoadingState(submitBtn, spinner, btnText, false, "認証して登録完了 / Verify & Complete");
               checkMockAuth();
             }, 1000);
           } else {
@@ -816,6 +858,7 @@
           });
 
           showAuthResponse("会員登録が完了しました！ログイン中...", "success");
+          setLoadingState(submitBtn, spinner, btnText, false, "認証して登録完了 / Verify & Complete");
         } catch (error) {
           console.error("Verification error:", error);
           let errorMsg = "認証に失敗しました。コードが正しいかご確認ください。";
@@ -873,6 +916,10 @@
     // ログアウト処理
     // ==========================================
     document.getElementById("logoutBtn").addEventListener("click", async (e) => {
+      if (!currentUserProfile) {
+        // 未ログイン時は単にログインフォームへの遷移を行うため、ログアウト処理や preventDefault は不要
+        return;
+      }
       e.preventDefault();
       if (isMockMode) {
         sessionStorage.removeItem("mock_logged_in_user");

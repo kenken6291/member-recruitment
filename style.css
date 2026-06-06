@@ -1450,9 +1450,8 @@ footer {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  padding: 40px 24px;
-  background: var(--bg-gradient);
+  min-height: auto;
+  padding: 40px 0;
 }
 
 .auth-card {
