@@ -279,6 +279,23 @@
                   <span id="loginBtnText">ログイン / Login</span>
                 </button>
               </form>
+              <div class="social-login-separator">
+                <span>またはSNSアカウントでログイン / Or Login with</span>
+              </div>
+              <div class="social-login-buttons">
+                <button type="button" class="social-btn google-btn" onclick="handleSocialLogin('google')">
+                  <span class="social-icon">Google</span>
+                </button>
+                <button type="button" class="social-btn line-btn" onclick="handleSocialLogin('line')">
+                  <span class="social-icon">LINE</span>
+                </button>
+                <button type="button" class="social-btn apple-btn" onclick="handleSocialLogin('apple')">
+                  <span class="social-icon">Apple</span>
+                </button>
+                <button type="button" class="social-btn x-btn" onclick="handleSocialLogin('x')">
+                  <span class="social-icon">X</span>
+                </button>
+              </div>
               <div class="auth-links">
                 <a href="#" id="toSignupBtn">新規会員登録はこちら / Sign Up</a>
                 <a href="#" id="toResetBtn">パスワードを忘れた方はこちら / Forgot Password?</a>
@@ -315,8 +332,53 @@
                   <span id="signupBtnText">SMS認証コードを送信 / Send Code</span>
                 </button>
               </form>
+              <div class="social-login-separator">
+                <span>またはSNSで新規登録 / Or Sign Up with</span>
+              </div>
+              <div class="social-login-buttons">
+                <button type="button" class="social-btn google-btn" onclick="handleSocialLogin('google')">
+                  <span class="social-icon">Google</span>
+                </button>
+                <button type="button" class="social-btn line-btn" onclick="handleSocialLogin('line')">
+                  <span class="social-icon">LINE</span>
+                </button>
+                <button type="button" class="social-btn apple-btn" onclick="handleSocialLogin('apple')">
+                  <span class="social-icon">Apple</span>
+                </button>
+                <button type="button" class="social-btn x-btn" onclick="handleSocialLogin('x')">
+                  <span class="social-icon">X</span>
+                </button>
+              </div>
               <div class="auth-links">
                 <a href="#" id="toLoginBtn">ログイン画面へ戻る / Back to Login</a>
+              </div>
+            </div>
+
+            <!-- SNS登録者用携帯番号入力カード -->
+            <div id="socialPhoneCard" class="auth-subcard" style="display: none;">
+              <h2>携帯電話番号の登録 <span class="section-en-title">Phone Verification</span></h2>
+              <p class="sms-instructions">SNS認証に成功しました。会員登録を完了するため、携帯電話番号を入力してSMS認証を行ってください。</p>
+              <form id="socialPhoneForm" novalidate>
+                <div class="form-group">
+                  <label for="socialNickname">ニックネーム <span class="en-label">/ Nickname (You can change this)</span></label>
+                  <input type="text" id="socialNickname" required placeholder="ニックネームを入力">
+                </div>
+                <div class="form-group">
+                  <label for="socialPhone">携帯電話番号 <span class="en-label">/ Mobile Phone (SMS Verification)</span></label>
+                  <input type="tel" id="socialPhone" required placeholder="09012345678 (ハイフンなし)">
+                  <p class="input-help-text">※SMSで6桁の認証コードが送信されます。日本の携帯番号を入力してください。</p>
+                </div>
+                
+                <!-- reCAPTCHAコンテナ (Firebase電話番号認証に必要) -->
+                <div id="social-recaptcha-container"></div>
+                
+                <button type="submit" class="submit-btn" id="socialPhoneSubmitBtn">
+                  <span class="spinner auth-spinner" id="socialPhoneSpinner" style="display: none;"></span>
+                  <span id="socialPhoneBtnText">SMS認証コードを送信 / Send Code</span>
+                </button>
+              </form>
+              <div class="auth-links">
+                <a href="#" id="socialPhoneToLoginBtn">ログイン画面へ戻る / Back to Login</a>
               </div>
             </div>
 
@@ -416,7 +478,11 @@
       RecaptchaVerifier,
       signInWithPhoneNumber,
       EmailAuthProvider,
-      linkWithCredential
+      linkWithCredential,
+      GoogleAuthProvider,
+      TwitterAuthProvider,
+      OAuthProvider,
+      signInWithPopup
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { 
       getFirestore, 
@@ -478,6 +544,8 @@
     let selectedBase64Image = null;
     let selectedImageMeta = {};
     let tempSignupData = null;      // SMS認証中に一時保存する登録データ
+    let currentSocialProvider = null; // LINE, Google, Apple, X
+    let socialUserData = null;        // SNSログインから一時取得したプロフィールデータ
 
     // DOM要素の取得
     const authContainer = document.getElementById("authContainer");
@@ -486,6 +554,7 @@
     const signupCard = document.getElementById("signupCard");
     const smsVerifyCard = document.getElementById("smsVerifyCard");
     const resetCard = document.getElementById("resetCard");
+    const socialPhoneCard = document.getElementById("socialPhoneCard");
     const authResponseMessage = document.getElementById("authResponseMessage");
 
     // ==========================================
@@ -546,6 +615,7 @@
       signupCard.style.display = "none";
       smsVerifyCard.style.display = "none";
       resetCard.style.display = "none";
+      socialPhoneCard.style.display = "none";
       authResponseMessage.className = "message-box";
       authResponseMessage.textContent = "";
 
@@ -557,6 +627,7 @@
     document.getElementById("toLoginBtn").addEventListener("click", (e) => { e.preventDefault(); showCard("loginCard"); });
     document.getElementById("resetToLoginBtn").addEventListener("click", (e) => { e.preventDefault(); showCard("loginCard"); });
     document.getElementById("cancelSmsBtn").addEventListener("click", (e) => { e.preventDefault(); showCard("signupCard"); });
+    document.getElementById("socialPhoneToLoginBtn").addEventListener("click", (e) => { e.preventDefault(); showCard("loginCard"); });
 
     // reCAPTCHAの初期化 (モックモード時は空処理)
     function initRecaptcha() {
@@ -576,6 +647,186 @@
       setLoadingState(document.getElementById("signupSubmitBtn"), document.getElementById("signupSpinner"), document.getElementById("signupBtnText"), false, "SMS認証コードを送信 / Send Code");
       setLoadingState(document.getElementById("smsSubmitBtn"), document.getElementById("smsSpinner"), document.getElementById("smsBtnText"), false, "認証して登録完了 / Verify & Complete");
       setLoadingState(document.getElementById("resetSubmitBtn"), document.getElementById("resetSpinner"), document.getElementById("resetBtnText"), false, "リセットメールを送信 / Send Reset Email");
+      setLoadingState(document.getElementById("socialPhoneSubmitBtn"), document.getElementById("socialPhoneSpinner"), document.getElementById("socialPhoneBtnText"), false, "SMS認証コードを送信 / Send Code");
+    }
+
+    // ==========================================
+    // ソーシャルログイン処理 (Google, LINE, Apple, X)
+    // ==========================================
+    window.handleSocialLogin = async function(providerName) {
+      currentSocialProvider = providerName;
+      resetAuthFormsLoading();
+      
+      if (isMockMode) {
+        // デモ用ダイアログ表示
+        document.getElementById("mockSocialDialog").style.display = "flex";
+      } else {
+        // Firebase本番モード
+        let provider;
+        if (providerName === 'google') {
+          provider = new GoogleAuthProvider();
+        } else if (providerName === 'x') {
+          provider = new TwitterAuthProvider();
+        } else if (providerName === 'apple') {
+          provider = new OAuthProvider('apple.com');
+        } else if (providerName === 'line') {
+          // LINEログインは Firebase OIDC を利用して構成
+          provider = new OAuthProvider('oidc.line');
+        }
+
+        try {
+          const result = await signInWithPopup(auth, provider);
+          const user = result.user;
+          
+          // メールアドレスで既存ユーザーを検索
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          
+          if (userDoc.exists()) {
+            // 既存会員：そのままログイン完了
+            showAuthResponse("SNSログインに成功しました。ログイン中...", "success");
+          } else {
+            // 新規会員：携帯電話番号登録へ
+            socialUserData = {
+              uid: user.uid,
+              email: user.email || `${providerName}-user-${Date.now()}@example.com`,
+              nickname: user.displayName || `${providerName.toUpperCase()}ユーザー`
+            };
+            
+            document.getElementById("socialNickname").value = socialUserData.nickname;
+            showCard("socialPhoneCard");
+            initSocialRecaptcha();
+          }
+        } catch (error) {
+          console.error("SNS Signin error:", error);
+          let errorMsg = "SNS認証に失敗しました。";
+          
+          if (error.code === "auth/account-exists-with-different-credential") {
+            errorMsg = "このメールアドレスは既に異なるサインイン方法で登録されています。アカウントの統合が必要です。";
+          }
+          showAuthResponse(errorMsg, "error");
+        }
+      }
+    };
+
+    window.closeMockSocialDialog = function() {
+      document.getElementById("mockSocialDialog").style.display = "none";
+    };
+
+    window.selectMockSocialUser = function(userType) {
+      closeMockSocialDialog();
+      const provider = currentSocialProvider || 'demo';
+      
+      if (userType === 'new') {
+        // 新規SNSユーザーのシミュレーション
+        socialUserData = {
+          uid: `${provider}-mock-uid-${Date.now()}`,
+          email: `${provider}-new@example.com`,
+          nickname: `${provider.charAt(0).toUpperCase() + provider.slice(1)}登録ユーザー`
+        };
+        
+        document.getElementById("socialNickname").value = socialUserData.nickname;
+        showCard("socialPhoneCard");
+      } else {
+        // 既存のSNSユーザーのシミュレーション（demo@example.com に紐付ける）
+        const users = JSON.parse(localStorage.getItem("mock_users") || "{}");
+        const existingUser = users["demo@example.com"];
+        
+        if (existingUser) {
+          sessionStorage.setItem("mock_logged_in_user", JSON.stringify(existingUser));
+          showAuthResponse("SNSログインに成功しました！(デモ)", "success");
+          setTimeout(() => {
+            checkMockAuth();
+          }, 800);
+        } else {
+          showAuthResponse("デモ用アカウントが存在しません。新規登録から行ってください。", "error");
+        }
+      }
+    };
+
+    // SNS登録者用携帯番号登録 & SMS送信
+    document.getElementById("socialPhoneForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const nickname = document.getElementById("socialNickname").value.trim();
+      const phone = document.getElementById("socialPhone").value.trim();
+      const submitBtn = document.getElementById("socialPhoneSubmitBtn");
+      const spinner = document.getElementById("socialPhoneSpinner");
+      const btnText = document.getElementById("socialPhoneBtnText");
+
+      if (!nickname || !phone) {
+        showAuthResponse("すべての項目を入力してください。", "error");
+        return;
+      }
+
+      let formattedPhone = phone;
+      if (formattedPhone.startsWith("0")) {
+        formattedPhone = "+81" + formattedPhone.substring(1);
+      }
+      if (!formattedPhone.startsWith("+")) {
+        showAuthResponse("正しい電話番号を入力してください。", "error");
+        return;
+      }
+
+      setLoadingState(submitBtn, spinner, btnText, true, "SMS送信中...");
+
+      if (isMockMode) {
+        setTimeout(() => {
+          tempSignupData = {
+            nickname: nickname,
+            email: socialUserData.email,
+            password: "social-auth-password",
+            phone: formattedPhone,
+            isSocial: true,
+            socialUid: socialUserData.uid
+          };
+          
+          document.getElementById("verifyPhoneDisplay").textContent = phone;
+          alert(`【デモ用SMS送信シミュレーション】\n携帯番号: ${phone} 宛てにSMSを送信しました。\n認証コードは [ 123456 ] です。`);
+          
+          showCard("smsVerifyCard");
+          setLoadingState(submitBtn, spinner, btnText, false, "SMS認証コードを送信 / Send Code");
+        }, 1000);
+      } else {
+        try {
+          initSocialRecaptcha();
+          const appVerifier = window.socialRecaptchaVerifier;
+          const confirmationResult = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
+          
+          window.confirmationResult = confirmationResult;
+          tempSignupData = {
+            nickname: nickname,
+            email: socialUserData.email,
+            password: "social-auth-password",
+            phone: formattedPhone,
+            isSocial: true,
+            socialUid: socialUserData.uid
+          };
+
+          document.getElementById("verifyPhoneDisplay").textContent = phone;
+          showCard("smsVerifyCard");
+          setLoadingState(submitBtn, spinner, btnText, false, "SMS認証コードを送信 / Send Code");
+        } catch (error) {
+          console.error("SMS Send error (Social):", error);
+          let errorMsg = "SMS送信に失敗しました。電話番号が正しいかご確認ください。";
+          showAuthResponse(errorMsg, "error");
+          setLoadingState(submitBtn, spinner, btnText, false, "SMS認証コードを送信 / Send Code");
+          if (window.socialRecaptchaVerifier) {
+            window.socialRecaptchaVerifier.render().then(widgetId => {
+              grecaptcha.reset(widgetId);
+            });
+          }
+        }
+      }
+    });
+
+    function initSocialRecaptcha() {
+      if (isMockMode) return;
+      if (!window.socialRecaptchaVerifier) {
+        window.socialRecaptchaVerifier = new RecaptchaVerifier(auth, 'social-recaptcha-container', {
+          'size': 'normal',
+          'callback': (response) => {}
+        });
+        window.socialRecaptchaVerifier.render();
+      }
     }
 
     // ==========================================
@@ -818,7 +1069,7 @@
         setTimeout(() => {
           if (code === "123456") {
             const users = JSON.parse(localStorage.getItem("mock_users") || "{}");
-            const newUid = "mock-user-" + Date.now();
+            const newUid = tempSignupData.isSocial ? tempSignupData.socialUid : ("mock-user-" + Date.now());
             const newUser = {
               uid: newUid,
               email: tempSignupData.email,
@@ -847,10 +1098,16 @@
           const result = await window.confirmationResult.confirm(code);
           const user = result.user;
 
-          const credential = EmailAuthProvider.credential(tempSignupData.email, tempSignupData.password);
-          await linkWithCredential(user, credential);
+          let finalUid = user.uid;
+          
+          if (tempSignupData.isSocial) {
+            finalUid = tempSignupData.socialUid;
+          } else {
+            const credential = EmailAuthProvider.credential(tempSignupData.email, tempSignupData.password);
+            await linkWithCredential(user, credential);
+          }
 
-          await setDoc(doc(db, "users", user.uid), {
+          await setDoc(doc(db, "users", finalUid), {
             nickname: tempSignupData.nickname,
             email: tempSignupData.email,
             phone: tempSignupData.phone,
@@ -1544,5 +1801,24 @@
         .replace(/'/g, "&#039;");
     }
   </script>
+
+  <!-- デモ用SNSアカウント選択ダイアログ (モック用) -->
+  <div id="mockSocialDialog" class="mock-dialog-overlay" style="display: none;">
+    <div class="mock-dialog-card">
+      <h3>【デモ】SNSアカウントの選択 / Select SNS Account</h3>
+      <p>テスト用にログインするデモアカウントを選択してください。</p>
+      <div class="mock-user-options">
+        <button type="button" class="mock-user-btn" onclick="selectMockSocialUser('new')">
+          🆕 新規のSNSアカウント (New User)<br>
+          <small>※ログイン後に携帯番号登録/SMS認証へ進みます</small>
+        </button>
+        <button type="button" class="mock-user-btn" onclick="selectMockSocialUser('existing')">
+          👥 既存の登録済みSNSアカウント (Existing User)<br>
+          <small>※demo@example.com に紐づいて即ログインされます</small>
+        </button>
+      </div>
+      <button type="button" class="mock-dialog-close" onclick="closeMockSocialDialog()">キャンセル / Cancel</button>
+    </div>
+  </div>
 </body>
 </html>

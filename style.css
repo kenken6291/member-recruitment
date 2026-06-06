@@ -1554,3 +1554,220 @@ footer {
     font-size: 1.5rem;
   }
 }
+
+/* ==========================================
+   ソーシャルログイン関連スタイル
+   ========================================== */
+.social-login-separator {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 24px 0 16px 0;
+  color: var(--light-text);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.social-login-separator::before,
+.social-login-separator::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.social-login-separator:not(:empty)::before {
+  margin-right: .5em;
+}
+
+.social-login-separator:not(:empty)::after {
+  margin-left: .5em;
+}
+
+.social-login-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.social-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--border-radius-sm);
+  background: var(--white);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.social-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.social-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 各SNSのブランドスタイル */
+.google-btn {
+  color: #555;
+  border-color: #e2e8f0;
+}
+.google-btn::before {
+  content: '🔴';
+  font-size: 0.95rem;
+}
+.google-btn:hover {
+  background: #f7fafc;
+}
+
+.line-btn {
+  background: #06C755;
+  color: #ffffff;
+  border-color: #06C755;
+}
+.line-btn::before {
+  content: '💬';
+  font-size: 0.95rem;
+}
+.line-btn:hover {
+  background: #05b04b;
+}
+
+.apple-btn {
+  background: #000000;
+  color: #ffffff;
+  border-color: #000000;
+}
+.apple-btn::before {
+  content: '🍏';
+  font-size: 0.95rem;
+}
+.apple-btn:hover {
+  background: #111;
+}
+
+.x-btn {
+  background: #0f1419;
+  color: #ffffff;
+  border-color: #0f1419;
+}
+.x-btn::before {
+  content: '𝕏';
+  font-family: Arial, sans-serif;
+  font-weight: 900;
+  font-size: 0.95rem;
+}
+.x-btn:hover {
+  background: #20272f;
+}
+
+/* ==========================================
+   デモ用ダイアログ (モック用)
+   ========================================== */
+.mock-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  animation: fadeIn 0.3s ease;
+}
+
+.mock-dialog-card {
+  background: var(--white);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 32px;
+  width: 90%;
+  max-width: 480px;
+  text-align: center;
+  animation: scaleUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.mock-dialog-card h3 {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--dark-text);
+}
+
+.mock-dialog-card p {
+  font-size: 0.9rem;
+  color: var(--light-text);
+  margin-bottom: 24px;
+}
+
+.mock-user-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.mock-user-btn {
+  padding: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--border-radius-md);
+  background: var(--input-bg);
+  cursor: pointer;
+  font-weight: 700;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.mock-user-btn:hover {
+  background: var(--primary-glow);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.mock-user-btn small {
+  display: block;
+  font-weight: 400;
+  color: var(--light-text);
+  margin-top: 4px;
+}
+
+.mock-dialog-close {
+  background: transparent;
+  border: none;
+  color: var(--light-text);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.mock-dialog-close:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
