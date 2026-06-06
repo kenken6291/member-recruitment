@@ -11,37 +11,56 @@
 </head>
 <body>
 
+  <!-- フローティングヘッダーナビゲーション -->
+  <nav class="navbar" id="mainNavbar">
+    <div class="navbar-container">
+      <a href="#" class="nav-logo">60代はやりたい放題 <span class="nav-logo-en">/ Wild at 60s</span></a>
+      <div class="nav-links">
+        <a href="#hobbies">趣味紹介 <span class="nav-link-en">/ Showcase</span></a>
+        <a href="#message-board">交流掲示板 <span class="nav-link-en">/ Board</span></a>
+        <a href="#join-form" class="nav-cta">メンバー登録 <span class="nav-link-en">/ Join</span></a>
+      </div>
+    </div>
+  </nav>
+
   <!-- ヒーローセクション -->
-  <header>
-    <div class="badge">New Community / 新規コミュニティ</div>
-    <h1>60代はやりたい放題</h1>
-    <h2 class="hero-en-title">Wild at 60s</h2>
-    
-    <!-- テスト警告バナー -->
-    <div class="test-warning-banner">
-      <span class="warning-tag">⚠️ テストページ / TEST PAGE</span>
-      <p class="warning-text">※これはテストページです。登録・投稿はしないでください。</p>
-      <p class="warning-text en-text">※This is a test page. Please do NOT register or post.</p>
-    </div>
-    
-    <!-- コンセプト紹介文 -->
-    <div class="concept-container">
-      <p class="hero-desc">
-        趣味をお互いに紹介し合い、交流を拡げたい方を募集します！タイトルは「60代はやりたい放題」としていますが、年齢・性別は一切問いません。学生から80代の方まで、幅広い世代が繋がれる交流の場を目指しています。
-      </p>
-      <p class="hero-desc en-text">
-        We are recruiting people who want to introduce their hobbies and expand their network! Although the title is "Wild at 60s," age and gender do not matter at all. We aim to create a community where a wide range of generations, from students to people in their 80s, can connect.
-      </p>
-    </div>
-    
-    <div class="hero-cta-group">
-      <a href="#join-form" class="hero-btn" id="heroCtaBtn">メンバーに申し込む / Apply Now</a>
-      <a href="#message-board" class="hero-btn secondary" id="heroMsgBtn">交流スペースを見る / View Board</a>
-    </div>
-    
-    <!-- ヒーロー画像 -->
-    <div class="hero-image-container">
-      <img src="hero_community.jpg" class="hero-image" alt="コラボレーションするコミュニティメンバーのイメージイラスト" id="heroImage">
+  <header id="hero">
+    <div class="hero-wrapper">
+      <!-- 左側：キャッチコピーと情報 -->
+      <div class="hero-content">
+        <div class="badge">New Community / 新規コミュニティ</div>
+        <h1>60代はやりたい放題</h1>
+        <h2 class="hero-en-title">Wild at 60s</h2>
+        
+        <!-- テスト警告バナー -->
+        <div class="test-warning-banner">
+          <span class="warning-tag">⚠️ テストページ / TEST PAGE</span>
+          <p class="warning-text">※これはテストページです。登録・投稿はしないでください。</p>
+          <p class="warning-text en-text">※This is a test page. Please do NOT register or post.</p>
+        </div>
+        
+        <!-- コンセプト紹介文 -->
+        <div class="concept-container">
+          <p class="hero-desc">
+            趣味をお互いに紹介し合い、交流を拡げたい方を募集します！タイトルは「60代はやりたい放題」としていますが、年齢・性別は一切問いません。学生から80代の方まで、幅広い世代が繋がれる交流の場を目指しています。
+          </p>
+          <p class="hero-desc en-text">
+            We are recruiting people who want to introduce their hobbies and expand their network! Although the title is "Wild at 60s," age and gender do not matter at all. We aim to create a community where a wide range of generations, from students to people in their 80s, can connect.
+          </p>
+        </div>
+        
+        <div class="hero-cta-group">
+          <a href="#join-form" class="hero-btn" id="heroCtaBtn">メンバーに申し込む / Apply Now</a>
+          <a href="#message-board" class="hero-btn secondary" id="heroMsgBtn">交流スペースを見る / View Board</a>
+        </div>
+      </div>
+      
+      <!-- 右側：メイン写真 -->
+      <div class="hero-image-area">
+        <div class="hero-image-container">
+          <img src="hero_community.jpg" class="hero-image" alt="コラボレーションするコミュニティメンバーのイメージイラスト" id="heroImage">
+        </div>
+      </div>
     </div>
   </header>
 
@@ -106,13 +125,13 @@
         
         <!-- プログラミング -->
         <article class="hobby-card">
+          <div class="hobby-img-wrapper">
+            <img src="hobby_programming.png" alt="プログラミング / Programming" loading="lazy">
+          </div>
           <div class="hobby-info">
             <h3>プログラミング <span class="en-sub-title">Programming & Gaming</span></h3>
             <p class="card-jp-desc">ゲーム開発やアプリ作成。いくつになっても新しい技術を学び、パソコンに向かってクリエイティブなものづくりに没頭します。</p>
-            <p class="en-text">Game development and app coding. Never stop learning new tech, dive into creative creation on computers.</p>
-          </div>
-          <div class="hobby-img-wrapper">
-            <img src="hobby_programming.png" alt="プログラミング / Programming" loading="lazy">
+            <p class="en-text">Never stop learning new tech, dive into creative creation on computers.</p>
           </div>
         </article>
       </div>
@@ -775,6 +794,7 @@
       return re.test(String(email).toLowerCase());
     }
 
+    // HTMLエスケープ処理
     function escapeHTML(str) {
       if (!str) return "";
       return str
