@@ -1322,6 +1322,10 @@ footer {
     padding: 6px 10px; /* CTAボタンの余白を小さく */
   }
 
+  .nav-links a:not(.nav-cta) {
+    display: none; /* 通常リンクを非表示にし、CTA(ログイン/アウト)ボタンのみ表示してはみ出しを防ぐ */
+  }
+
   .nav-logo-en, .nav-link-en {
     display: none; /* スマホでは英語サブテキストを非表示にして省スペース化 */
   }

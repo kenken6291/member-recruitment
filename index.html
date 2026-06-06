@@ -271,6 +271,7 @@
               </div>
             </div>
           </div>
+        </div>
 
           <!-- タブ2: 会員関係図 -->
           <div id="tabContentGraph" class="board-tab-content">
@@ -544,6 +545,8 @@
       getDownloadURL 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
+
+
     // Firebaseの初期化設定 (ユーザーが自身のプロジェクト情報に書き換えて使用します)
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY_HERE",
@@ -712,7 +715,8 @@
       if (!localStorage.getItem("mock_posts")) {
         localStorage.setItem("mock_posts", JSON.stringify(DEFAULT_MOCK_POSTS));
       }
-      if (!localStorage.getItem("mock_users") || !JSON.parse(localStorage.getItem("mock_users"))["ken@example.com"]) {
+      const storedUsers = localStorage.getItem("mock_users");
+      if (!storedUsers || !JSON.parse(storedUsers)["ken@example.com"]) {
         localStorage.setItem("mock_users", JSON.stringify(DEFAULT_MOCK_USERS));
       }
     }
@@ -2330,5 +2334,7 @@
       <button type="button" class="mock-dialog-close" onclick="closeMockSocialDialog()">キャンセル / Cancel</button>
     </div>
   </div>
+
+
 </body>
 </html>
