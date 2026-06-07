@@ -2112,6 +2112,55 @@ footer {
   outline: 2px solid var(--primary); /* アクセシビリティ：フォーカス時の枠線 */
   color: var(--primary);
 }
+/* ==========================================
+   イベント募集機能のスタイル
+   ========================================== */
+.event-card {
+  border-left: 4px solid var(--primary) !important;
+}
 
+.event-card-title {
+  margin: 0 0 10px 0;
+  font-size: 1.15rem;
+  color: var(--primary);
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 6px;
+}
 
+.event-meta-info {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: 10px;
+}
+
+.participants-list-names {
+  color: var(--text-muted);
+}
+
+.disabled-style {
+  opacity: 0.6;
+  cursor: not-allowed !important;
+}
+
+/* datetime-local の色調整 (モバイル含む) */
+input[type="datetime-local"] {
+  background: var(--white);
+  color: var(--text-dark);
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.95rem;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+/* ダークテーマ内（モーダル・フォーム内）での datetime-local 表示調整 */
+.post-form-wrapper input[type="datetime-local"] {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--white) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
 

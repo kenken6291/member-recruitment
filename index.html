@@ -163,6 +163,9 @@
             <button class="board-tab-btn" id="tabBtnGraph" onclick="switchBoardTab('graph')">
               🕸️ 会員関係図 / Member Graph
             </button>
+            <button class="board-tab-btn" id="tabBtnEvents" onclick="switchBoardTab('events')">
+              📅 イベント募集 / Events
+            </button>
           </div>
 
           <!-- タブ1: 交流掲示板 -->
@@ -292,6 +295,79 @@
                 <svg id="memberGraph"></svg>
                 <!-- ツールチップ -->
                 <div id="graphTooltip" class="graph-tooltip" style="display: none;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- タブ3: イベント募集 -->
+          <div id="tabContentEvents" class="board-tab-content">
+            <p class="board-subtitle">イベントを企画して告知したり、他のメンバーの募集に参加しましょう！</p>
+            <p class="board-subtitle en-text">Organize events to invite members, or join recruitment created by others!</p>
+            
+            <div class="board-layout">
+              <!-- 左側：イベント作成フォーム -->
+              <div class="post-form-wrapper">
+                <form id="eventForm" novalidate>
+                  <div class="auth-user-badge" style="margin-bottom: 16px; font-size: 0.9rem; font-weight: 700; color: var(--primary); background: var(--primary-glow); padding: 8px 12px; border-radius: var(--border-radius-sm); display: inline-block;">
+                    👤 主催者: <span id="eventUserNickname">読み込み中...</span>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="eventName">イベント名 <span class="en-label">/ Event Name (Required)</span></label>
+                    <input type="text" id="eventName" required placeholder="例: 春の卓球大会 (Spring Ping-Pong Meet)">
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="eventDateTime">日時 <span class="en-label">/ Date & Time (Required)</span></label>
+                    <input type="datetime-local" id="eventDateTime" required style="background: var(--white); color: var(--text-dark); border: 1px solid var(--border); padding: 10px 14px; border-radius: var(--border-radius-sm); font-size: 0.95rem; width: 100%; box-sizing: border-box;">
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="eventLocation">場所 <span class="en-label">/ Location (Required)</span></label>
+                    <input type="text" id="eventLocation" required placeholder="例: 中央区民体育館、またはZoomリンク等">
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="eventOrganizer">主催者名 <span class="en-label">/ Organizer Name</span></label>
+                    <input type="text" id="eventOrganizer" placeholder="主催者ニックネーム">
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="eventJoinMethod">参加方法 <span class="en-label">/ How to Join</span></label>
+                    <input type="text" id="eventJoinMethod" placeholder="例: 当日現地集合、またはコメントで表明">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="eventDescription">イベント内容 <span class="en-label">/ Event Description</span></label>
+                    <textarea id="eventDescription" placeholder="イベントの持ち物や、活動の流れを記述してください。" rows="4"></textarea>
+                  </div>
+
+                  <!-- 注意事項・免責事項の編集エリア -->
+                  <div class="form-group">
+                    <label for="eventTerms">注意事項・免責事項 <span class="en-label">/ Terms & Disclaimer (Editable)</span></label>
+                    <textarea id="eventTerms" placeholder="注意事項・免責事項" rows="5"></textarea>
+                    <p class="input-help-text">※標準テキストが初期設定されています。イベントに合わせて編集可能です。</p>
+                  </div>
+
+                  <div id="eventResponseMessage" class="message-box" role="alert" aria-live="polite"></div>
+
+                  <button type="submit" class="submit-btn" id="eventSubmitBtn" style="margin-top: 12px;">
+                    <span class="spinner" id="eventSpinner" style="display: none;"></span>
+                    <span id="eventBtnText">イベントを作成する / Create Event</span>
+                  </button>
+                </form>
+              </div>
+
+              <!-- 右側：募集中のイベント一覧 -->
+              <div class="timeline-wrapper">
+                <h3>募集中のイベント一覧 <span class="en-sub-title">/ Active Events</span></h3>
+                <div id="eventTimeline" class="timeline">
+                  <!-- JSで動的にカードが生成されます -->
+                  <div class="loading-state" id="eventLoadingState">
+                    <span class="loading-spinner"></span>
+                    <p>イベントを読み込んでいます... / Loading events...</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1404,20 +1480,38 @@
     window.switchBoardTab = function(tabName) {
       const tabBtnBoard = document.getElementById("tabBtnBoard");
       const tabBtnGraph = document.getElementById("tabBtnGraph");
+      const tabBtnEvents = document.getElementById("tabBtnEvents");
+      
       const tabContentBoard = document.getElementById("tabContentBoard");
       const tabContentGraph = document.getElementById("tabContentGraph");
+      const tabContentEvents = document.getElementById("tabContentEvents");
+
+      tabBtnBoard.classList.remove('active');
+      tabBtnGraph.classList.remove('active');
+      tabBtnEvents.classList.remove('active');
+      
+      tabContentBoard.classList.remove('active');
+      tabContentGraph.classList.remove('active');
+      tabContentEvents.classList.remove('active');
 
       if (tabName === 'board') {
         tabBtnBoard.classList.add('active');
-        tabBtnGraph.classList.remove('active');
         tabContentBoard.classList.add('active');
-        tabContentGraph.classList.remove('active');
       } else if (tabName === 'graph') {
-        tabBtnBoard.classList.remove('active');
         tabBtnGraph.classList.add('active');
-        tabContentBoard.classList.remove('active');
         tabContentGraph.classList.add('active');
         renderMemberGraph();
+      } else if (tabName === 'events') {
+        tabBtnEvents.classList.add('active');
+        tabContentEvents.classList.add('active');
+        
+        // 主催者のデフォルト設定
+        if (currentUserProfile) {
+          document.getElementById("eventUserNickname").textContent = currentUserProfile.nickname;
+          document.getElementById("eventOrganizer").value = currentUserProfile.nickname;
+        }
+        initEventTermsTemplate();
+        subscribeToEvents();
       }
     };
 
@@ -2261,6 +2355,239 @@
 
     // 初期化実行
     initPasswordToggles();
+
+    // ==========================================
+    // イベント募集機能制御ロジック
+    // ==========================================
+    let unsubscribeEvents = null;
+    let allEvents = [];
+
+    function initEventTermsTemplate() {
+      const termsInput = document.getElementById("eventTerms");
+      if (termsInput && !termsInput.value.trim()) {
+        termsInput.value = `【参加時の注意事項 / Precautions】
+・他の参加者への敬意を払い、マナーを守って交流してください。
+・営利目的の宣伝や宗教・政治活動への勧誘行為は禁止します。
+・オフラインでの集会への参加は、各自十分な体調管理と安全対策を行ってください。
+
+【免責事項 / Disclaimer】
+・イベント内および道中で発生したトラブル（事故、怪我、金銭トラブル等）について、運営者は一切の責任を負いません。
+・すべて自己責任のもとでの参加となりますことをご了承のうえお申し込みください。`;
+      }
+    }
+
+    // イベント作成処理
+    document.getElementById("eventForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      
+      if (!currentUserProfile) {
+        alert("ログインしていません。");
+        return;
+      }
+
+      const name = document.getElementById("eventName").value.trim();
+      const dateTime = document.getElementById("eventDateTime").value;
+      const location = document.getElementById("eventLocation").value.trim();
+      const organizer = document.getElementById("eventOrganizer").value.trim() || currentUserProfile.nickname;
+      const joinMethod = document.getElementById("eventJoinMethod").value.trim();
+      const description = document.getElementById("eventDescription").value.trim();
+      const terms = document.getElementById("eventTerms").value.trim();
+
+      const submitBtn = document.getElementById("eventSubmitBtn");
+      const spinner = document.getElementById("eventSpinner");
+      const btnText = document.getElementById("eventBtnText");
+      const responseMessage = document.getElementById("eventResponseMessage");
+
+      if (!name || !dateTime || !location) {
+        showResponse(responseMessage, "イベント名、日時、場所を入力してください。", "error");
+        return;
+      }
+
+      setLoadingState(submitBtn, spinner, btnText, true, "イベント作成中...");
+
+      const eventData = {
+        name,
+        dateTime,
+        location,
+        organizer,
+        joinMethod,
+        description,
+        terms,
+        creatorUid: currentUserProfile.uid,
+        participants: [currentUserProfile.nickname], // 初期状態で主催者が参加
+        createdAt: new Date().toISOString()
+      };
+
+      if (isMockMode) {
+        setTimeout(() => {
+          const mockEvents = JSON.parse(localStorage.getItem("mock_events") || "[]");
+          eventData.id = "event-" + Date.now();
+          mockEvents.unshift(eventData);
+          localStorage.setItem("mock_events", JSON.stringify(mockEvents));
+          
+          showResponse(responseMessage, "イベントを作成しました！", "success");
+          document.getElementById("eventForm").reset();
+          initEventTermsTemplate();
+          setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+          
+          loadMockEvents();
+        }, 1000);
+      } else {
+        try {
+          await addDoc(collection(db, "events"), {
+            ...eventData,
+            createdAt: serverTimestamp()
+          });
+          
+          showResponse(responseMessage, "イベントを作成しました！", "success");
+          document.getElementById("eventForm").reset();
+          initEventTermsTemplate();
+          setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+        } catch (error) {
+          console.error("Error creating event:", error);
+          showResponse(responseMessage, "イベントの作成に失敗しました。", "error");
+          setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+        }
+      }
+    });
+
+    // リアルタイム購読開始
+    function subscribeToEvents() {
+      const timeline = document.getElementById("eventTimeline");
+      if (isMockMode) {
+        loadMockEvents();
+        return;
+      }
+
+      if (unsubscribeEvents) unsubscribeEvents();
+
+      const q = query(
+        collection(db, "events"),
+        orderBy("createdAt", "desc")
+      );
+
+      unsubscribeEvents = onSnapshot(q, (snapshot) => {
+        allEvents = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          allEvents.push({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : new Date().toISOString()
+          });
+        });
+        renderEvents();
+      }, (error) => {
+        console.error("Firestore events loading error:", error);
+        timeline.innerHTML = `<div class="error-msg">イベントデータの同期中にエラーが発生しました。</div>`;
+      });
+    }
+
+    // モックデータロード
+    function loadMockEvents() {
+      const mockEventsStr = localStorage.getItem("mock_events") || "[]";
+      allEvents = JSON.parse(mockEventsStr);
+      renderEvents();
+    }
+
+    // イベントレンダリング
+    function renderEvents() {
+      const timeline = document.getElementById("eventTimeline");
+      if (!timeline) return;
+
+      if (allEvents.length === 0) {
+        timeline.innerHTML = `
+          <div class="empty-state">
+            <p>募集中のイベントはありません。最初のイベントを企画してみましょう！</p>
+            <p class="en-text">No active events. Let's organize the first event!</p>
+          </div>
+        `;
+        return;
+      }
+
+      timeline.innerHTML = "";
+      allEvents.forEach(event => {
+        const dateObj = new Date(event.dateTime);
+        const formattedDate = isNaN(dateObj) ? event.dateTime : `${dateObj.getFullYear()}/${String(dateObj.getMonth()+1).padStart(2, '0')}/${String(dateObj.getDate()).padStart(2, '0')} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+
+        const isUserJoined = currentUserProfile && event.participants.includes(currentUserProfile.nickname);
+        const joinBtnText = isUserJoined ? "参加申込済み / Joined" : "参加を申し込む / Join Event";
+        const joinBtnClass = isUserJoined ? "submit-btn secondary disabled-style" : "submit-btn";
+        const disabledAttr = isUserJoined ? "disabled" : "";
+
+        const participantsList = event.participants && event.participants.length > 0 
+          ? event.participants.join(", ") 
+          : "なし";
+
+        const card = document.createElement("article");
+        card.className = "message-card event-card";
+        card.innerHTML = `
+          <div class="message-header">
+            <span class="message-user">👤 主催者: ${escapeHTML(event.organizer)}</span>
+            <span class="message-time">${formattedDate}</span>
+          </div>
+          <div class="message-content">
+            <h4 class="event-card-title">📅 ${escapeHTML(event.name)}</h4>
+            <div class="event-meta-info" style="margin-top: 10px; font-size: 0.9rem; line-height: 1.6;">
+              <div><strong>📍 場所:</strong> ${escapeHTML(event.location)}</div>
+              <div><strong>🤝 参加方法:</strong> ${escapeHTML(event.joinMethod || "自由参加")}</div>
+              <div style="margin-top: 8px;"><strong>📝 内容:</strong><br>${escapeHTML(event.description || "未設定").replace(/\n/g, '<br>')}</div>
+            </div>
+            
+            <details class="terms-accordion" style="margin-top: 12px;">
+              <summary class="terms-summary" style="font-size: 0.85rem; padding: 6px 10px;">
+                <span>⚠️ 注意事項・免責事項 / Terms & Disclaimer</span>
+              </summary>
+              <div class="terms-content" style="padding: 10px; font-size: 0.8rem; line-height: 1.5; border-radius: 4px; background: rgba(255, 255, 255, 0.02); margin-top: 6px;">
+                ${escapeHTML(event.terms || "特になし").replace(/\n/g, '<br>')}
+              </div>
+            </details>
+
+            <div class="event-participants" style="margin-top: 12px; font-size: 0.85rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px;">
+              <strong>👥 参加者 (${event.participants ? event.participants.length : 0}名):</strong> <span class="participants-list-names">${escapeHTML(participantsList)}</span>
+            </div>
+          </div>
+          <div class="message-actions" style="margin-top: 12px; display: flex; justify-content: flex-end;">
+            <button type="button" class="${joinBtnClass}" ${disabledAttr} onclick="joinEvent('${event.id}')" style="padding: 6px 16px; font-size: 0.85rem; margin-top: 0; width: auto;">
+              ${joinBtnText}
+            </button>
+          </div>
+        `;
+        timeline.appendChild(card);
+      });
+    }
+
+    // 参加表明処理
+    window.joinEvent = async function(eventId) {
+      if (!currentUserProfile) {
+        alert("ログインしていません。");
+        return;
+      }
+
+      if (isMockMode) {
+        const mockEvents = JSON.parse(localStorage.getItem("mock_events") || "[]");
+        const eventIndex = mockEvents.findIndex(e => e.id === eventId);
+        if (eventIndex !== -1) {
+          const event = mockEvents[eventIndex];
+          if (!event.participants.includes(currentUserProfile.nickname)) {
+            event.participants.push(currentUserProfile.nickname);
+            mockEvents[eventIndex] = event;
+            localStorage.setItem("mock_events", JSON.stringify(mockEvents));
+            loadMockEvents();
+          }
+        }
+      } else {
+        try {
+          const eventRef = doc(db, "events", eventId);
+          await updateDoc(eventRef, {
+            participants: arrayUnion(currentUserProfile.nickname)
+          });
+        } catch (error) {
+          console.error("Error joining event:", error);
+          alert("イベントへの参加登録に失敗しました。");
+        }
+      }
+    };
 
     // ==========================================
     // 掲示板メッセージの投稿 (Firestore)
