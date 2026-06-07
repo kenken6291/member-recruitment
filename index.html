@@ -307,6 +307,10 @@
             <div class="board-layout">
               <!-- 左側：イベント作成フォーム -->
               <div class="post-form-wrapper">
+                <div id="eventEditBanner" style="display: none; justify-content: space-between; align-items: center; background: var(--secondary-glow); border: 1px solid var(--secondary); padding: 8px 12px; border-radius: var(--border-radius-sm); margin-bottom: 16px; font-size: 0.9rem; font-weight: 700; color: var(--secondary);">
+                  <span>✏️ イベント編集中 / Editing Event</span>
+                  <button type="button" onclick="cancelEditEventMode()" style="background: none; border: none; color: var(--error); cursor: pointer; font-weight: 700; font-size: 0.85rem; padding: 0;">キャンセル / Cancel</button>
+                </div>
                 <form id="eventForm" novalidate>
                   <div class="auth-user-badge" style="margin-bottom: 16px; font-size: 0.9rem; font-weight: 700; color: var(--primary); background: var(--primary-glow); padding: 8px 12px; border-radius: var(--border-radius-sm); display: inline-block;">
                     👤 主催者: <span id="eventUserNickname">読み込み中...</span>
@@ -638,7 +642,8 @@
       serverTimestamp,
       getDocs,
       where,
-      writeBatch
+      writeBatch,
+      deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { 
       getStorage, 
@@ -2409,7 +2414,28 @@
       });
     }
 
-    // イベント作成処理
+    // イベント編集状態の保持と補助関数
+    let editingEventId = null;
+
+    window.cancelEditEventMode = function() {
+      editingEventId = null;
+      document.getElementById("eventForm").reset();
+      initEventTermsTemplate();
+      
+      const editBanner = document.getElementById("eventEditBanner");
+      if (editBanner) editBanner.style.display = "none";
+      
+      const submitBtnText = document.getElementById("eventBtnText");
+      if (submitBtnText) submitBtnText.textContent = "イベントを作成する / Create Event";
+      
+      // 主催者のデフォルト設定を戻す
+      if (currentUserProfile) {
+        document.getElementById("eventUserNickname").textContent = currentUserProfile.nickname;
+        document.getElementById("eventOrganizer").value = currentUserProfile.nickname;
+      }
+    };
+
+    // イベント作成・編集処理
     document.getElementById("eventForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       
@@ -2443,53 +2469,98 @@
         return;
       }
 
-      setLoadingState(submitBtn, spinner, btnText, true, "イベント作成中...");
+      const loadingText = editingEventId ? "イベント更新中..." : "イベント作成中...";
+      setLoadingState(submitBtn, spinner, btnText, true, loadingText);
 
-      const eventData = {
-        name,
-        startDateTime,
-        endDateTime,
-        // 旧フィールドとの互換性のためのフォールバック
-        dateTime: startDateTime,
-        location,
-        organizer,
-        joinMethod,
-        description,
-        terms,
-        creatorUid: currentUserProfile.uid,
-        participants: [currentUserProfile.nickname], // 初期状態で主催者が参加
-        createdAt: new Date().toISOString()
-      };
+      if (editingEventId) {
+        // イベント編集（更新）処理
+        const existingEvent = allEvents.find(ev => ev.id === editingEventId);
+        const updatedEventData = {
+          ...existingEvent,
+          name,
+          startDateTime,
+          endDateTime,
+          dateTime: startDateTime, // 旧フィールドとの互換性
+          location,
+          organizer,
+          joinMethod,
+          description,
+          terms,
+        };
 
-      if (isMockMode) {
-        setTimeout(() => {
-          const mockEvents = JSON.parse(localStorage.getItem("mock_events") || "[]");
-          eventData.id = "event-" + Date.now();
-          mockEvents.unshift(eventData);
-          localStorage.setItem("mock_events", JSON.stringify(mockEvents));
-          
-          showResponse(responseMessage, "イベントを作成しました！", "success");
-          document.getElementById("eventForm").reset();
-          initEventTermsTemplate();
-          setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
-          
-          loadMockEvents();
-        }, 1000);
+        if (isMockMode) {
+          setTimeout(() => {
+            let mockEvents = JSON.parse(localStorage.getItem("mock_events") || "[]");
+            mockEvents = mockEvents.map(ev => ev.id === editingEventId ? updatedEventData : ev);
+            localStorage.setItem("mock_events", JSON.stringify(mockEvents));
+            
+            showResponse(responseMessage, "イベントを更新しました！", "success");
+            cancelEditEventMode();
+            setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+            
+            loadMockEvents();
+          }, 1000);
+        } else {
+          try {
+            const eventRef = doc(db, "events", editingEventId);
+            await updateDoc(eventRef, updatedEventData);
+            
+            showResponse(responseMessage, "イベントを更新しました！", "success");
+            cancelEditEventMode();
+            setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+          } catch (error) {
+            console.error("Error updating event:", error);
+            showResponse(responseMessage, "イベントの更新に失敗しました。", "error");
+            setLoadingState(submitBtn, spinner, btnText, false, "イベントを更新する / Update Event");
+          }
+        }
       } else {
-        try {
-          await addDoc(collection(db, "events"), {
-            ...eventData,
-            createdAt: serverTimestamp()
-          });
-          
-          showResponse(responseMessage, "イベントを作成しました！", "success");
-          document.getElementById("eventForm").reset();
-          initEventTermsTemplate();
-          setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
-        } catch (error) {
-          console.error("Error creating event:", error);
-          showResponse(responseMessage, "イベントの作成に失敗しました。", "error");
-          setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+        // 新規イベント作成処理
+        const eventData = {
+          name,
+          startDateTime,
+          endDateTime,
+          dateTime: startDateTime,
+          location,
+          organizer,
+          joinMethod,
+          description,
+          terms,
+          creatorUid: currentUserProfile.uid,
+          participants: [currentUserProfile.nickname], // 初期状態で主催者が参加
+          createdAt: new Date().toISOString()
+        };
+
+        if (isMockMode) {
+          setTimeout(() => {
+            const mockEvents = JSON.parse(localStorage.getItem("mock_events") || "[]");
+            eventData.id = "event-" + Date.now();
+            mockEvents.unshift(eventData);
+            localStorage.setItem("mock_events", JSON.stringify(mockEvents));
+            
+            showResponse(responseMessage, "イベントを作成しました！", "success");
+            document.getElementById("eventForm").reset();
+            initEventTermsTemplate();
+            setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+            
+            loadMockEvents();
+          }, 1000);
+        } else {
+          try {
+            await addDoc(collection(db, "events"), {
+              ...eventData,
+              createdAt: serverTimestamp()
+            });
+            
+            showResponse(responseMessage, "イベントを作成しました！", "success");
+            document.getElementById("eventForm").reset();
+            initEventTermsTemplate();
+            setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+          } catch (error) {
+            console.error("Error creating event:", error);
+            showResponse(responseMessage, "イベントの作成に失敗しました。", "error");
+            setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+          }
         }
       }
     });
@@ -2579,12 +2650,23 @@
           ? event.participants.join(", ") 
           : "なし";
 
+        const isCreator = currentUserProfile && event.creatorUid === currentUserProfile.uid;
+
         const card = document.createElement("article");
         card.className = "message-card event-card";
+        card.id = `eventCard-${event.id}`;
         card.innerHTML = `
-          <div class="message-header">
-            <span class="message-user">👤 主催者: ${escapeHTML(event.organizer)}</span>
-            <span class="message-time">${formattedDate}</span>
+          <div class="message-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="event-user-meta">
+              <span class="message-user">👤 主催者: ${escapeHTML(event.organizer)}</span>
+              <span class="message-time">${formattedDate}</span>
+            </div>
+            ${isCreator ? `
+              <div class="message-edit-actions">
+                <button type="button" class="edit-action-btn edit-msg-btn" onclick="startEditEvent('${event.id}')" title="イベント編集">✏️ 編集</button>
+                <button type="button" class="edit-action-btn delete-msg-btn" onclick="confirmDeleteEvent('${event.id}')" title="イベント削除">🗑️ 削除</button>
+              </div>
+            ` : ''}
           </div>
           <div class="message-content">
             <h4 class="event-card-title">📅 ${escapeHTML(event.name)}</h4>
@@ -3092,10 +3174,22 @@
         
         const mainCard = document.createElement('div');
         mainCard.className = 'message-card parent-message';
+        mainCard.id = `postCard-${msg.id}`;
+
+        const isMsgCreator = currentUserProfile && msg.uid === currentUserProfile.uid;
+
         mainCard.innerHTML = `
           <div class="message-card-header">
-            <span class="message-nickname">${escapeHTML(msg.nickname)}</span>
-            <span class="message-category">${escapeHTML(msg.category)}</span>
+            <div class="message-user-meta">
+              <span class="message-nickname">${escapeHTML(msg.nickname)}</span>
+              <span class="message-category">${escapeHTML(msg.category)}</span>
+            </div>
+            ${isMsgCreator ? `
+              <div class="message-edit-actions">
+                <button type="button" class="edit-action-btn edit-msg-btn" onclick="startEditComment('${msg.id}')" title="編集">✏️ 編集</button>
+                <button type="button" class="edit-action-btn delete-msg-btn" onclick="confirmDeleteComment('${msg.id}')" title="削除">🗑️ 削除</button>
+              </div>
+            ` : ''}
           </div>
           <p class="message-body">${escapeHTML(msg.comment).replace(/\n/g, '<br>')}</p>
           
@@ -3147,10 +3241,22 @@
             
             const replyCard = document.createElement('div');
             replyCard.className = 'message-card child-message';
+            replyCard.id = `postCard-${reply.id}`;
+
+            const isReplyCreator = currentUserProfile && reply.uid === currentUserProfile.uid;
+
             replyCard.innerHTML = `
               <div class="message-card-header">
-                <span class="message-nickname">${escapeHTML(reply.nickname)}</span>
-                <span class="message-reply-tag">返信 / Reply</span>
+                <div class="message-user-meta">
+                  <span class="message-nickname">${escapeHTML(reply.nickname)}</span>
+                  <span class="message-reply-tag">返信 / Reply</span>
+                </div>
+                ${isReplyCreator ? `
+                  <div class="message-edit-actions">
+                    <button type="button" class="edit-action-btn edit-msg-btn" onclick="startEditComment('${reply.id}')" title="編集">✏️ 編集</button>
+                    <button type="button" class="edit-action-btn delete-msg-btn" onclick="confirmDeleteComment('${reply.id}')" title="削除">🗑️ 削除</button>
+                  </div>
+                ` : ''}
               </div>
               <p class="message-body">${escapeHTML(reply.comment).replace(/\n/g, '<br>')}</p>
               <div class="message-card-footer">
@@ -3209,6 +3315,166 @@
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
     }
+
+    // ==========================================
+    // コメント・イベントの編集＆削除機能
+    // ==========================================
+    window.startEditComment = function(postId) {
+      const card = document.getElementById(`postCard-${postId}`);
+      if (!card) return;
+      
+      const bodyTextElem = card.querySelector('.message-body');
+      if (!bodyTextElem || card.querySelector('.edit-textarea-container')) return;
+      
+      const post = allMessages.find(m => m.id === postId);
+      if (!post) return;
+      
+      bodyTextElem.style.display = 'none';
+      
+      const editContainer = document.createElement('div');
+      editContainer.className = 'edit-textarea-container';
+      editContainer.innerHTML = `
+        <textarea class="edit-comment-textarea" rows="3" style="width:100%; margin-bottom: 8px; font-family: var(--font-body); padding: 8px; border-radius: var(--border-radius-sm); border: 1px solid rgba(0,0,0,0.1); outline: none;">${escapeHTML(post.comment)}</textarea>
+        <div class="edit-actions-row" style="display:flex; gap:8px; justify-content:flex-end;">
+          <button type="button" class="submit-btn compact" onclick="saveEditedComment('${postId}')" style="width:auto; padding:6px 12px; margin-top:0;">保存</button>
+          <button type="button" class="graph-reset-btn" onclick="cancelEditComment('${postId}')" style="margin-top:0; padding:6px 12px;">キャンセル</button>
+        </div>
+      `;
+      
+      bodyTextElem.parentNode.insertBefore(editContainer, bodyTextElem.nextSibling);
+    };
+    
+    window.cancelEditComment = function(postId) {
+      const card = document.getElementById(`postCard-${postId}`);
+      if (!card) return;
+      
+      const editContainer = card.querySelector('.edit-textarea-container');
+      if (editContainer) {
+        editContainer.remove();
+      }
+      
+      const bodyTextElem = card.querySelector('.message-body');
+      if (bodyTextElem) {
+        bodyTextElem.style.display = 'block';
+      }
+    };
+    
+    window.saveEditedComment = async function(postId) {
+      const card = document.getElementById(`postCard-${postId}`);
+      if (!card) return;
+      
+      const textarea = card.querySelector('.edit-comment-textarea');
+      if (!textarea) return;
+      
+      const newComment = textarea.value.trim();
+      if (!newComment) {
+        alert("コメントを入力してください。");
+        return;
+      }
+      
+      const post = allMessages.find(m => m.id === postId);
+      if (!post) return;
+      
+      if (isMockMode) {
+        let mockPosts = JSON.parse(localStorage.getItem("mock_posts") || "[]");
+        mockPosts = mockPosts.map(p => {
+          if (p.id === postId) {
+            return { ...p, comment: newComment };
+          }
+          return p;
+        });
+        localStorage.setItem("mock_posts", JSON.stringify(mockPosts));
+        loadMockMessages();
+      } else {
+        try {
+          const postRef = doc(db, "posts", postId);
+          await updateDoc(postRef, {
+            comment: newComment
+          });
+        } catch (error) {
+          console.error("Error updating comment:", error);
+          alert("コメントの更新に失敗しました。");
+        }
+      }
+    };
+    
+    window.confirmDeleteComment = async function(postId) {
+      const confirmed = confirm("このコメントを削除してもよろしいですか？");
+      if (!confirmed) return;
+      
+      if (isMockMode) {
+        let mockPosts = JSON.parse(localStorage.getItem("mock_posts") || "[]");
+        mockPosts = mockPosts.filter(p => p.id !== postId && p.parentId !== postId);
+        localStorage.setItem("mock_posts", JSON.stringify(mockPosts));
+        loadMockMessages();
+      } else {
+        try {
+          const batch = writeBatch(db);
+          batch.delete(doc(db, "posts", postId));
+          
+          const repliesQuery = query(collection(db, "posts"), where("parentId", "==", postId));
+          const repliesSnapshot = await getDocs(repliesQuery);
+          repliesSnapshot.forEach(docSnap => {
+            batch.delete(docSnap.ref);
+          });
+          
+          await batch.commit();
+        } catch (error) {
+          console.error("Error deleting comment:", error);
+          alert("コメントの削除に失敗しました。");
+        }
+      }
+    };
+
+    window.startEditEvent = function(eventId) {
+      const event = allEvents.find(e => e.id === eventId);
+      if (!event) return;
+      
+      editingEventId = eventId;
+      
+      // プレフィル
+      document.getElementById("eventName").value = event.name;
+      document.getElementById("eventStartDateTime").value = event.startDateTime || event.dateTime || "";
+      document.getElementById("eventEndDateTime").value = event.endDateTime || "";
+      document.getElementById("eventLocation").value = event.location;
+      document.getElementById("eventOrganizer").value = event.organizer;
+      document.getElementById("eventJoinMethod").value = event.joinMethod || "";
+      document.getElementById("eventDescription").value = event.description || "";
+      document.getElementById("eventTerms").value = event.terms || "";
+      
+      // バナー表示
+      const editBanner = document.getElementById("eventEditBanner");
+      if (editBanner) editBanner.style.display = "flex";
+      
+      // 送信ボタンのテキスト変更
+      const submitBtnText = document.getElementById("eventBtnText");
+      if (submitBtnText) submitBtnText.textContent = "イベントを更新する / Update Event";
+      
+      // フォームまでスクロール
+      const formWrapper = document.getElementById("eventForm").closest(".post-form-wrapper");
+      if (formWrapper) {
+        formWrapper.scrollIntoView({ behavior: "smooth" });
+      }
+    };
+
+    window.confirmDeleteEvent = async function(eventId) {
+      const confirmed = confirm("このイベントを削除（キャンセル）しますか？");
+      if (!confirmed) return;
+      
+      if (isMockMode) {
+        let mockEvents = JSON.parse(localStorage.getItem("mock_events") || "[]");
+        mockEvents = mockEvents.filter(e => e.id !== eventId);
+        localStorage.setItem("mock_events", JSON.stringify(mockEvents));
+        loadMockEvents();
+      } else {
+        try {
+          await deleteDoc(doc(db, "events", eventId));
+        } catch (error) {
+          console.error("Error deleting event:", error);
+          alert("イベントの削除に失敗しました。");
+        }
+      }
+    };
   </script>
 
   <!-- デモ用SNSアカウント選択ダイアログ (モック用) -->
