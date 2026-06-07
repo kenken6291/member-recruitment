@@ -2343,3 +2343,156 @@ input[type="datetime-local"] {
   }
 }
 
+
+/* ==========================================
+   写真アップロードゾーン
+   ========================================== */
+.photo-upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--border-radius-sm);
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  background: var(--input-bg);
+  color: var(--text-muted);
+  position: relative;
+}
+
+.photo-upload-zone:hover,
+.photo-upload-zone:focus {
+  border-color: var(--primary);
+  background: var(--primary-glow);
+  color: var(--primary);
+  outline: none;
+}
+
+.photo-upload-zone.drag-over {
+  border-color: var(--primary);
+  background: var(--primary-glow);
+  transform: scale(1.01);
+  box-shadow: 0 0 0 4px var(--primary-glow);
+}
+
+.photo-upload-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.photo-upload-icon {
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.photo-upload-zone:hover .photo-upload-icon,
+.photo-upload-zone.drag-over .photo-upload-icon {
+  opacity: 0.9;
+}
+
+.photo-upload-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.photo-upload-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* プレビューコンテナ */
+.photo-preview-container {
+  cursor: pointer;
+}
+
+.photo-preview-wrapper {
+  position: relative;
+  display: inline-block;
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  max-width: 100%;
+}
+
+.photo-preview-img {
+  display: block;
+  max-width: 100%;
+  max-height: 200px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border);
+}
+
+.photo-remove-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 26px;
+  text-align: center;
+  transition: background 0.2s;
+  z-index: 2;
+}
+
+.photo-remove-btn:hover {
+  background: var(--error);
+}
+
+/* ==========================================
+   Google Earth / Maps リンクボタン（イベントカード内）
+   ========================================== */
+.google-earth-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, #1a73e8, #0d47a1);
+  color: #fff !important;
+  text-decoration: none;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.35);
+  white-space: nowrap;
+}
+
+.google-earth-btn:hover {
+  background: linear-gradient(135deg, #1565c0, #0a3880);
+  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.5);
+  transform: translateY(-1px);
+}
+
+/* ==========================================
+   イベントカード内の写真表示
+   ========================================== */
+.event-card-photo-wrap {
+  margin: 10px 0;
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  line-height: 0;
+}
+
+.event-card-photo {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--border-radius-sm);
+  display: block;
+}

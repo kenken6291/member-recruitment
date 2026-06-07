@@ -333,8 +333,9 @@
                   </div>
                   
                   <div class="form-group">
-                    <label for="eventLocation">場所 <span class="en-label">/ Location (Required)</span></label>
-                    <input type="text" id="eventLocation" required placeholder="例: 中央区民体育館、またはZoomリンク等">
+                    <label for="eventLocation">場所 <span class="en-label">/ Location (Required・Google Earth URL可)</span></label>
+                    <input type="text" id="eventLocation" required placeholder="例: https://earth.google.com/... または 中央区民体育館 等の住所">
+                    <p class="input-help-text">※ Google Earth・GoogleマップのURLを入力すると、詳細画面に地図リンクボタンが表示されます。</p>
                   </div>
                   
                   <div class="form-group">
@@ -350,6 +351,26 @@
                   <div class="form-group">
                     <label for="eventDescription">イベント内容 <span class="en-label">/ Event Description</span></label>
                     <textarea id="eventDescription" placeholder="イベントの持ち物や、活動の流れを記述してください。" rows="4"></textarea>
+                  </div>
+
+                  <!-- イベント写真アップロード -->
+                  <div class="form-group">
+                    <label>イベント写真 <span class="en-label">/ Event Photo (任意 / Optional)</span></label>
+                    <div class="photo-upload-zone" id="photoUploadZone" role="button" tabindex="0" aria-label="写真をアップロード">
+                      <div class="photo-upload-inner">
+                        <svg class="photo-upload-icon" xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        <p class="photo-upload-text">クリックまたはドラッグ＆ドロップ<br><span class="en-label">Click or drag &amp; drop to upload</span></p>
+                        <p class="photo-upload-hint">JPEG / PNG / WEBP・最大5MB</p>
+                      </div>
+                    </div>
+                    <input type="file" id="eventPhotoInput" accept="image/jpeg,image/png,image/webp" style="display:none" aria-hidden="true">
+                    <div id="photoPreviewContainer" class="photo-preview-container" style="display:none">
+                      <div class="photo-preview-wrapper">
+                        <img id="photoPreviewImg" class="photo-preview-img" alt="プレビュー">
+                        <button type="button" id="removePhotoBtn" class="photo-remove-btn" aria-label="写真を削除">×</button>
+                      </div>
+                      <p class="photo-upload-hint" style="margin-top:6px;">📷 写真を選択済み（クリックで変更）</p>
+                    </div>
                   </div>
 
                   <!-- 注意事項・免責事項の編集エリア -->
@@ -2458,6 +2479,84 @@
     }
 
 
+    // ==============================
+    // 写真アップロード機能
+    // ==============================
+    (function setupPhotoUpload() {
+      const zone = document.getElementById("photoUploadZone");
+      const input = document.getElementById("eventPhotoInput");
+      const previewContainer = document.getElementById("photoPreviewContainer");
+      const previewImg = document.getElementById("photoPreviewImg");
+      const removeBtn = document.getElementById("removePhotoBtn");
+      const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+      if (!zone || !input) return;
+
+      function loadFile(file) {
+        if (!file) return;
+        if (!file.type.match(/image\/(jpeg|png|webp)/)) {
+          alert("JPEG / PNG / WEBPの画像ファイルを選択してください。");
+          return;
+        }
+        if (file.size > MAX_SIZE) {
+          alert("ファイルサイズは5MB以内にしてください。");
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          previewImg.src = e.target.result;
+          previewContainer.style.display = "block";
+          zone.style.display = "none";
+        };
+        reader.readAsDataURL(file);
+      }
+
+      // クリックでファイル選択
+      zone.addEventListener("click", () => input.click());
+      zone.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") input.click(); });
+
+      // プレビュー表示中もクリックで変更可能
+      previewContainer.addEventListener("click", () => input.click());
+
+      input.addEventListener("change", () => loadFile(input.files[0]));
+
+      // ドラッグ＆ドロップ
+      zone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        zone.classList.add("drag-over");
+      });
+      zone.addEventListener("dragleave", () => zone.classList.remove("drag-over"));
+      zone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        zone.classList.remove("drag-over");
+        const file = e.dataTransfer.files[0];
+        loadFile(file);
+      });
+
+      // 削除ボタン
+      if (removeBtn) {
+        removeBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          previewImg.src = "";
+          input.value = "";
+          previewContainer.style.display = "none";
+          zone.style.display = "block";
+        });
+      }
+    })();
+
+    // 写真アップロードをリセットするヘルパー（フォームリセット後に呼び出す）
+    function resetPhotoUpload() {
+      const photoPreviewImg = document.getElementById("photoPreviewImg");
+      const photoPreviewContainer = document.getElementById("photoPreviewContainer");
+      const photoUploadZone = document.getElementById("photoUploadZone");
+      const photoInput = document.getElementById("eventPhotoInput");
+      if (photoPreviewImg) photoPreviewImg.src = "";
+      if (photoPreviewContainer) photoPreviewContainer.style.display = "none";
+      if (photoUploadZone) photoUploadZone.style.display = "block";
+      if (photoInput) photoInput.value = "";
+    }
+
     // イベント編集状態の保持と補助関数
     let editingEventId = null;
 
@@ -2477,6 +2576,16 @@
         document.getElementById("eventUserNickname").textContent = currentUserProfile.nickname;
         document.getElementById("eventOrganizer").value = currentUserProfile.nickname;
       }
+
+      // 写真プレビューをリセット
+      const photoPreviewImg = document.getElementById("photoPreviewImg");
+      const photoPreviewContainer = document.getElementById("photoPreviewContainer");
+      const photoUploadZone = document.getElementById("photoUploadZone");
+      const photoInput = document.getElementById("eventPhotoInput");
+      if (photoPreviewImg) photoPreviewImg.src = "";
+      if (photoPreviewContainer) photoPreviewContainer.style.display = "none";
+      if (photoUploadZone) photoUploadZone.style.display = "block";
+      if (photoInput) photoInput.value = "";
 
       // バリデーション状態の更新
       validateEventSubmitBtn();
@@ -2499,6 +2608,10 @@
       const joinMethod = document.getElementById("eventJoinMethod").value.trim();
       const description = document.getElementById("eventDescription").value.trim();
       const terms = document.getElementById("eventTerms").value.trim();
+      // 写真Data URL（選択されていない場合は空文字）
+      const photoPreviewImg = document.getElementById("photoPreviewImg");
+      const photoDataUrl = (photoPreviewImg && photoPreviewImg.src && photoPreviewImg.src.startsWith("data:")) ? photoPreviewImg.src : "";
+
 
       const submitBtn = document.getElementById("eventSubmitBtn");
       const spinner = document.getElementById("eventSpinner");
@@ -2601,8 +2714,10 @@
           joinMethod,
           description,
           terms,
+          photoDataUrl,
           creatorUid: currentUserProfile.uid,
           participants: [currentUserProfile.nickname], // 初期状態で主催者が参加
+
           createdAt: new Date().toISOString()
         };
 
@@ -2625,6 +2740,7 @@
               showResponse(responseMessage, "イベントを作成しました！", "success");
               document.getElementById("eventForm").reset();
               initEventTermsTemplate();
+              resetPhotoUpload();
               loadMockEvents();
               
               // タイムラインへスクロール
@@ -2650,6 +2766,7 @@
             showResponse(responseMessage, "イベントを作成しました！", "success");
             document.getElementById("eventForm").reset();
             initEventTermsTemplate();
+            resetPhotoUpload();
             
             // タイムラインへスクロール
             const timeline = document.getElementById("eventTimeline");
@@ -2756,6 +2873,21 @@
 
         const isCreator = currentUserProfile && event.creatorUid === currentUserProfile.uid;
 
+        // Google Earth/Maps URL判定
+        const loc = event.location || "";
+        const isMapUrl = /earth\.google\.com|maps\.google\.com|goo\.gl\/maps|google\.com\/maps|maps\.app\.goo\.gl/i.test(loc);
+        const locationDisplay = isMapUrl
+          ? `<span style="font-size:0.85em;color:var(--text-muted);word-break:break-all;">${escapeHTML(loc)}</span>
+             <a href="${encodeURI(loc)}" target="_blank" rel="noopener noreferrer" class="google-earth-btn">
+               🌍 Googleアース・マップで見る / View on Google Maps
+             </a>`
+          : escapeHTML(loc);
+
+        // 写真表示
+        const photoHtml = event.photoDataUrl
+          ? `<div class="event-card-photo-wrap"><img src="${event.photoDataUrl}" class="event-card-photo" alt="イベント写真" loading="lazy"></div>`
+          : '';
+
         const card = document.createElement("article");
         card.className = "message-card event-card";
         card.id = `eventCard-${event.id}`;
@@ -2774,8 +2906,9 @@
           </div>
           <div class="message-content">
             <h4 class="event-card-title">📅 ${escapeHTML(event.name)}</h4>
+            ${photoHtml}
             <div class="event-meta-info" style="margin-top: 10px; font-size: 0.9rem; line-height: 1.6;">
-              <div><strong>📍 場所:</strong> ${escapeHTML(event.location)}</div>
+              <div><strong>📍 場所:</strong> ${locationDisplay}</div>
               <div><strong>🤝 参加方法:</strong> ${escapeHTML(event.joinMethod || "自由参加")}</div>
               <div style="margin-top: 8px;"><strong>📝 内容:</strong><br>${escapeHTML(event.description || "未設定").replace(/\n/g, '<br>')}</div>
             </div>
@@ -3574,6 +3707,21 @@
       document.getElementById("eventDescription").value = event.description || "";
       document.getElementById("eventTerms").value = event.terms || "";
       
+      // 写真プレビューの復元
+      const photoPreviewImg = document.getElementById("photoPreviewImg");
+      const photoPreviewContainer = document.getElementById("photoPreviewContainer");
+      const photoUploadZone = document.getElementById("photoUploadZone");
+      if (event.photoDataUrl && photoPreviewImg && photoPreviewContainer) {
+        photoPreviewImg.src = event.photoDataUrl;
+        photoPreviewContainer.style.display = "block";
+        if (photoUploadZone) photoUploadZone.style.display = "none";
+      } else if (photoPreviewContainer) {
+        photoPreviewContainer.style.display = "none";
+        if (photoUploadZone) photoUploadZone.style.display = "block";
+        if (photoPreviewImg) photoPreviewImg.src = "";
+      }
+      
+
       // バナー表示
       const editBanner = document.getElementById("eventEditBanner");
       if (editBanner) editBanner.style.display = "flex";
