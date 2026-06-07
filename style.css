@@ -1056,8 +1056,33 @@ h1 {
 }
 
 .submit-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.45;
   cursor: not-allowed;
+  background: #94a3b8;
+  box-shadow: none;
+}
+
+/* イベント登録ボタン専用スタイル */
+.event-register-btn {
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 0.5px;
+}
+
+.event-register-btn:not(:disabled) {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+  animation: eventBtnPulse 2s ease-in-out infinite;
+}
+
+.event-register-btn:not(:disabled):hover {
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+  transform: translateY(-2px);
+}
+
+@keyframes eventBtnPulse {
+  0%, 100% { box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); }
+  50% { box-shadow: 0 4px 25px rgba(99, 102, 241, 0.65); }
 }
 
 /* 送信ステータス表示 */

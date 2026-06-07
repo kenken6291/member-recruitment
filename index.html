@@ -361,9 +361,10 @@
 
                   <div id="eventResponseMessage" class="message-box" role="alert" aria-live="polite"></div>
 
-                  <button type="submit" class="submit-btn" id="eventSubmitBtn" style="margin-top: 12px;" disabled>
+                  <p id="eventValidationHint" class="input-help-text" style="margin-top: 12px; color: var(--text-muted); text-align: center; font-size: 0.85rem;">※ イベント名・開始日時・終了日時・場所をすべて入力すると登録ボタンが有効になります。</p>
+                  <button type="submit" class="submit-btn event-register-btn" id="eventSubmitBtn" style="margin-top: 8px; font-size: 1.05rem; padding: 18px;" disabled>
                     <span class="spinner" id="eventSpinner" style="display: none;"></span>
-                    <span id="eventBtnText">イベントを登録する / Create Event</span>
+                    <span id="eventBtnText">📅 イベントを登録する / Create Event</span>
                   </button>
                 </form>
               </div>
@@ -2387,31 +2388,45 @@
       }
     }
 
-    // 開始日時・終了日時のバリデーションと登録ボタンの制御
+    // 必須フィールドのバリデーションと登録ボタンの制御
     const startInput = document.getElementById("eventStartDateTime");
     const endInput = document.getElementById("eventEndDateTime");
+    const eventNameInput = document.getElementById("eventName");
+    const eventLocationInput = document.getElementById("eventLocation");
     const eventSubmitBtn = document.getElementById("eventSubmitBtn");
+    const eventValidationHint = document.getElementById("eventValidationHint");
 
     function validateEventSubmitBtn() {
       if (!startInput || !endInput || !eventSubmitBtn) return;
       
+      const nameVal = eventNameInput ? eventNameInput.value.trim() : "";
+      const locationVal = eventLocationInput ? eventLocationInput.value.trim() : "";
       const startVal = startInput.value;
       const endVal = endInput.value;
       
-      // 両方が入力されており、かつ終了日時が開始日時より後の場合のみ活性化
-      if (startVal && endVal && new Date(endVal) > new Date(startVal)) {
+      // すべての必須項目が入力されており、かつ終了日時が開始日時より後の場合のみ活性化
+      const allFilled = nameVal && startVal && endVal && locationVal;
+      const dateValid = startVal && endVal && new Date(endVal) > new Date(startVal);
+      
+      if (allFilled && dateValid) {
         eventSubmitBtn.disabled = false;
+        if (eventValidationHint) eventValidationHint.style.display = "none";
       } else {
         eventSubmitBtn.disabled = true;
+        if (eventValidationHint) eventValidationHint.style.display = "block";
       }
     }
 
+    // すべての必須フィールドにリスナーを登録
+    const requiredEventFields = [startInput, endInput, eventNameInput, eventLocationInput];
+    requiredEventFields.forEach(function(field) {
+      if (field) {
+        field.addEventListener("input", validateEventSubmitBtn);
+        field.addEventListener("change", validateEventSubmitBtn);
+      }
+    });
+
     if (startInput && endInput) {
-      startInput.addEventListener("input", validateEventSubmitBtn);
-      startInput.addEventListener("change", validateEventSubmitBtn);
-      endInput.addEventListener("input", validateEventSubmitBtn);
-      endInput.addEventListener("change", validateEventSubmitBtn);
-      
       // 開始日時が変更された際に終了日時を自動設定（1時間後）し、min属性を設定する
       startInput.addEventListener("change", function() {
         const startVal = this.value;
@@ -2452,7 +2467,7 @@
       if (editBanner) editBanner.style.display = "none";
       
       const submitBtnText = document.getElementById("eventBtnText");
-      if (submitBtnText) submitBtnText.textContent = "イベントを登録する / Create Event";
+      if (submitBtnText) submitBtnText.textContent = "📅 イベントを登録する / Create Event";
       
       // 主催者のデフォルト設定を戻す
       if (currentUserProfile) {
@@ -2544,7 +2559,7 @@
               console.error("Mock event update error:", error);
               showResponse(responseMessage, "イベントの更新中にエラーが発生しました。(デモ用)", "error");
             } finally {
-              setLoadingState(submitBtn, spinner, btnText, false, "イベントを登録する / Create Event");
+              setLoadingState(submitBtn, spinner, btnText, false, "📅 イベントを登録する / Create Event");
               validateEventSubmitBtn();
             }
           }, 1000);
@@ -2562,7 +2577,7 @@
               timeline.scrollIntoView({ behavior: "smooth" });
             }
             
-            setLoadingState(submitBtn, spinner, btnText, false, "イベントを登録する / Create Event");
+            setLoadingState(submitBtn, spinner, btnText, false, "📅 イベントを登録する / Create Event");
             validateEventSubmitBtn();
           } catch (error) {
             console.error("Error updating event:", error);
@@ -2618,7 +2633,7 @@
               console.error("Mock event create error:", error);
               showResponse(responseMessage, "イベントの作成中にエラーが発生しました。(デモ用)", "error");
             } finally {
-              setLoadingState(submitBtn, spinner, btnText, false, "イベントを登録する / Create Event");
+              setLoadingState(submitBtn, spinner, btnText, false, "📅 イベントを登録する / Create Event");
               validateEventSubmitBtn();
             }
           }, 1000);
@@ -2639,12 +2654,12 @@
               timeline.scrollIntoView({ behavior: "smooth" });
             }
             
-            setLoadingState(submitBtn, spinner, btnText, false, "イベントを登録する / Create Event");
+            setLoadingState(submitBtn, spinner, btnText, false, "📅 イベントを登録する / Create Event");
             validateEventSubmitBtn();
           } catch (error) {
             console.error("Error creating event:", error);
             showResponse(responseMessage, "イベントの作成に失敗しました。", "error");
-            setLoadingState(submitBtn, spinner, btnText, false, "イベントを登録する / Create Event");
+            setLoadingState(submitBtn, spinner, btnText, false, "📅 イベントを登録する / Create Event");
             validateEventSubmitBtn();
           }
         }
