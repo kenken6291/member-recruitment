@@ -1386,7 +1386,7 @@
       } else {
         try {
           await sendPasswordResetEmail(auth, email);
-          showAuthResponse("パスワード再設定用メールを送信しました。メールボックスをご確認ください。", "success");
+          showAuthResponse("パスワード再設定用メールを送信しました。メールに記載されたURLから再設定を行ってください。", "success");
           setLoadingState(submitBtn, spinner, btnText, false, "リセットメールを送信 / Send Reset Email");
         } catch (error) {
           console.error("Password reset error:", error);
