@@ -360,16 +360,21 @@
                       <div class="photo-upload-inner">
                         <svg class="photo-upload-icon" xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                         <p class="photo-upload-text">クリックまたはドラッグ＆ドロップ<br><span class="en-label">Click or drag &amp; drop to upload</span></p>
-                        <p class="photo-upload-hint">JPEG / PNG / WEBP・最大5MB</p>
+                        <p class="photo-upload-hint">JPEG / PNG / WEBP &middot; ファイルサイズは自動圧縮されます</p>
                       </div>
                     </div>
                     <input type="file" id="eventPhotoInput" accept="image/jpeg,image/png,image/webp" style="display:none" aria-hidden="true">
                     <div id="photoPreviewContainer" class="photo-preview-container" style="display:none">
                       <div class="photo-preview-wrapper">
                         <img id="photoPreviewImg" class="photo-preview-img" alt="プレビュー">
+                        <!-- 圧縮中オーバーレイ -->
+                        <div id="photoOptimizingOverlay" class="photo-optimizing-overlay" style="display:none" aria-live="polite">
+                          <span class="photo-optimizing-spinner"></span>
+                          <span class="photo-optimizing-text">圧縮中... / Optimizing...</span>
+                        </div>
                         <button type="button" id="removePhotoBtn" class="photo-remove-btn" aria-label="写真を削除">×</button>
                       </div>
-                      <p class="photo-upload-hint" style="margin-top:6px;">📷 写真を選択済み（クリックで変更）</p>
+                      <p class="photo-upload-hint" id="photoSizeInfo" style="margin-top:6px;">📷 写真を選択済み（クリックで変更）</p>
                     </div>
                   </div>
 
@@ -2480,7 +2485,7 @@
 
 
     // ==============================
-    // 写真アップロード機能
+    // 写真アップロード機能（自動リサイズ・圧縮付き）
     // ==============================
     (function setupPhotoUpload() {
       const zone = document.getElementById("photoUploadZone");
@@ -2488,52 +2493,142 @@
       const previewContainer = document.getElementById("photoPreviewContainer");
       const previewImg = document.getElementById("photoPreviewImg");
       const removeBtn = document.getElementById("removePhotoBtn");
-      const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+      const optimizingOverlay = document.getElementById("photoOptimizingOverlay");
+      const sizeInfo = document.getElementById("photoSizeInfo");
+
+      // 受け付けるファイルの最大サイズ（選択時のバリデーション: 30MB）
+      const MAX_INPUT_SIZE = 30 * 1024 * 1024;
+      // 出力目標サイズ（2MB以下）
+      const TARGET_OUTPUT_SIZE = 2 * 1024 * 1024;
+      // 長辺の最大ピクセル数
+      const MAX_LONG_EDGE = 1200;
 
       if (!zone || !input) return;
 
-      function loadFile(file) {
+      /**
+       * canvasを使った純粋JSによる画像圧縮・リサイズ関数
+       * 1. 長辺が MAX_LONG_EDGE を超えていればアスペクト比を保ってダウンスケール
+       * 2. JPEG品質を 0.85 から始め、出力が TARGET_OUTPUT_SIZE 以下になるまで繰り返し下げる
+       * @param {File} file - 入力ファイル
+       * @returns {Promise<string>} 圧縮後の DataURL
+       */
+      function compressImage(file) {
+        return new Promise(function(resolve, reject) {
+          const reader = new FileReader();
+          reader.onerror = reject;
+          reader.onload = function(e) {
+            const img = new Image();
+            img.onerror = reject;
+            img.onload = function() {
+              // --- リサイズ計算 ---
+              let w = img.naturalWidth;
+              let h = img.naturalHeight;
+              const longEdge = Math.max(w, h);
+              if (longEdge > MAX_LONG_EDGE) {
+                const scale = MAX_LONG_EDGE / longEdge;
+                w = Math.round(w * scale);
+                h = Math.round(h * scale);
+              }
+
+              // --- canvas で再描画 ---
+              const canvas = document.createElement("canvas");
+              canvas.width = w;
+              canvas.height = h;
+              const ctx = canvas.getContext("2d");
+              // アンチエイリアシング有効（高品質縮小）
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = "high";
+              ctx.drawImage(img, 0, 0, w, h);
+
+              // --- 品質を下げながら TARGET_OUTPUT_SIZE 以下を目指す ---
+              let quality = 0.85;
+              let dataUrl = canvas.toDataURL("image/jpeg", quality);
+              // base64 -> バイト数 の概算: (length - header) * 0.75
+              function approxBytes(durl) {
+                const base64 = durl.split(",")[1] || "";
+                return Math.round(base64.length * 0.75);
+              }
+
+              let iterations = 0;
+              while (approxBytes(dataUrl) > TARGET_OUTPUT_SIZE && quality > 0.25 && iterations < 12) {
+                quality = Math.max(quality - 0.08, 0.25);
+                dataUrl = canvas.toDataURL("image/jpeg", quality);
+                iterations++;
+              }
+
+              resolve({ dataUrl, quality, width: w, height: h, bytes: approxBytes(dataUrl) });
+            };
+            img.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      /** UI: 圧縮中オーバーレイを表示してプレビューコンテナを見せる */
+      function showOptimizing() {
+        if (optimizingOverlay) optimizingOverlay.style.display = "flex";
+        if (removeBtn) removeBtn.style.display = "none";
+        previewImg.src = "";
+        previewContainer.style.display = "block";
+        zone.style.display = "none";
+        if (sizeInfo) sizeInfo.textContent = "⏳ 自動圧縮中... / Optimizing...";
+      }
+
+      /** UI: 圧縮完了後に結果を表示 */
+      function showPreview(dataUrl, bytes) {
+        previewImg.src = dataUrl;
+        if (optimizingOverlay) optimizingOverlay.style.display = "none";
+        if (removeBtn) removeBtn.style.display = "block";
+        if (sizeInfo) {
+          const kb = Math.round(bytes / 1024);
+          const label = kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
+          sizeInfo.textContent = `📷 圧縮後サイズ: ${label}（クリックで変更）`;
+        }
+      }
+
+      /** メイン: ファイルを受け取って圧縮→プレビュー表示 */
+      async function loadFile(file) {
         if (!file) return;
         if (!file.type.match(/image\/(jpeg|png|webp)/)) {
           alert("JPEG / PNG / WEBPの画像ファイルを選択してください。");
           return;
         }
-        if (file.size > MAX_SIZE) {
-          alert("ファイルサイズは5MB以内にしてください。");
+        if (file.size > MAX_INPUT_SIZE) {
+          alert("30MBを超えるファイルは選択できません。");
           return;
         }
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          previewImg.src = e.target.result;
-          previewContainer.style.display = "block";
-          zone.style.display = "none";
-        };
-        reader.readAsDataURL(file);
+
+        showOptimizing();
+
+        try {
+          const { dataUrl, bytes } = await compressImage(file);
+          showPreview(dataUrl, bytes);
+        } catch (err) {
+          console.error("Image compression error:", err);
+          // 圧縮失敗時はそのまま元ファイルをDataURLで表示
+          const fallbackReader = new FileReader();
+          fallbackReader.onload = (ev) => showPreview(ev.target.result, file.size);
+          fallbackReader.readAsDataURL(file);
+        }
       }
 
-      // クリックでファイル選択
+      // --- イベントリスナー ---
       zone.addEventListener("click", () => input.click());
       zone.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") input.click(); });
-
-      // プレビュー表示中もクリックで変更可能
-      previewContainer.addEventListener("click", () => input.click());
-
+      previewContainer.addEventListener("click", (e) => {
+        // 削除ボタンは別途stopPropagationしているので通り抜けたら変更
+        if (e.target !== removeBtn) input.click();
+      });
       input.addEventListener("change", () => loadFile(input.files[0]));
 
-      // ドラッグ＆ドロップ
-      zone.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        zone.classList.add("drag-over");
-      });
+      zone.addEventListener("dragover", (e) => { e.preventDefault(); zone.classList.add("drag-over"); });
       zone.addEventListener("dragleave", () => zone.classList.remove("drag-over"));
       zone.addEventListener("drop", (e) => {
         e.preventDefault();
         zone.classList.remove("drag-over");
-        const file = e.dataTransfer.files[0];
-        loadFile(file);
+        loadFile(e.dataTransfer.files[0]);
       });
 
-      // 削除ボタン
       if (removeBtn) {
         removeBtn.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -2544,6 +2639,7 @@
         });
       }
     })();
+
 
     // 写真アップロードをリセットするヘルパー（フォームリセット後に呼び出す）
     function resetPhotoUpload() {
