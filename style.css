@@ -2070,4 +2070,64 @@ footer {
   }
 }
 
+/* ==========================================
+   パスワード表示トグル（目アイコン）スタイル
+   ========================================== */
+.password-input-container {
+  position: relative;
+  width: 100%;
+}
+
+.password-input-container input[type="password"],
+.password-input-container input[type="text"] {
+  padding-right: 42px !important; /* ボタンが重ならないよう右側にパディングを設定 */
+  width: 100%;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  padding: 4px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.4); /* デフォルトは少し薄い色 */
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.password-toggle-btn:hover {
+  color: rgba(255, 255, 255, 0.85); /* ホバー時に明るく */
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.password-toggle-btn:focus-visible {
+  outline: 2px solid var(--primary); /* アクセシビリティ：フォーカス時の枠線 */
+  color: var(--primary);
+}
+
+/* ライトテーマ対応 */
+#loginCard .password-toggle-btn {
+  color: rgba(0, 0, 0, 0.4);
+}
+#loginCard .password-toggle-btn:hover {
+  color: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.05);
+}
+#signupCard .password-toggle-btn {
+  color: rgba(0, 0, 0, 0.4);
+}
+#signupCard .password-toggle-btn:hover {
+  color: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+
 
