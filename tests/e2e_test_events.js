@@ -88,7 +88,8 @@ async function run() {
   
   // Set datetime-local input value
   await page.evaluate(() => {
-    document.getElementById('eventDateTime').value = '2026-06-15T10:00';
+    document.getElementById('eventStartDateTime').value = '2026-06-15T10:00';
+    document.getElementById('eventEndDateTime').value = '2026-06-15T12:00';
   });
 
   await page.type('#eventLocation', '中央区スポーツセンター 卓球室');

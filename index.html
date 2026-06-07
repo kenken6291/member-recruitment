@@ -317,9 +317,15 @@
                     <input type="text" id="eventName" required placeholder="例: 春の卓球大会 (Spring Ping-Pong Meet)">
                   </div>
                   
-                  <div class="form-group">
-                    <label for="eventDateTime">日時 <span class="en-label">/ Date & Time (Required)</span></label>
-                    <input type="datetime-local" id="eventDateTime" required style="background: var(--white); color: var(--text-dark); border: 1px solid var(--border); padding: 10px 14px; border-radius: var(--border-radius-sm); font-size: 0.95rem; width: 100%; box-sizing: border-box;">
+                  <div class="form-group event-datetime-group" style="display: flex; gap: 16px;">
+                    <div style="flex: 1;">
+                      <label for="eventStartDateTime">開始日時 <span class="en-label">/ Start Date & Time (Required)</span></label>
+                      <input type="datetime-local" id="eventStartDateTime" required style="background: var(--white); color: var(--text-dark); border: 1px solid var(--border); padding: 10px 14px; border-radius: var(--border-radius-sm); font-size: 0.95rem; width: 100%; box-sizing: border-box;">
+                    </div>
+                    <div style="flex: 1;">
+                      <label for="eventEndDateTime">終了日時 <span class="en-label">/ End Date & Time (Required)</span></label>
+                      <input type="datetime-local" id="eventEndDateTime" required style="background: var(--white); color: var(--text-dark); border: 1px solid var(--border); padding: 10px 14px; border-radius: var(--border-radius-sm); font-size: 0.95rem; width: 100%; box-sizing: border-box;">
+                    </div>
                   </div>
                   
                   <div class="form-group">
@@ -2376,6 +2382,33 @@
       }
     }
 
+    // 開始日時が変更された際に終了日時を自動設定（1時間後）し、min属性を設定する
+    const startInput = document.getElementById("eventStartDateTime");
+    const endInput = document.getElementById("eventEndDateTime");
+    if (startInput && endInput) {
+      startInput.addEventListener("change", function() {
+        const startVal = this.value;
+        if (startVal) {
+          endInput.min = startVal;
+          
+          // 終了日時が未入力、または開始日時より前の場合は、1時間後に設定
+          const startDate = new Date(startVal);
+          const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+          
+          const year = endDate.getFullYear();
+          const month = String(endDate.getMonth() + 1).padStart(2, '0');
+          const day = String(endDate.getDate()).padStart(2, '0');
+          const hours = String(endDate.getHours()).padStart(2, '0');
+          const minutes = String(endDate.getMinutes()).padStart(2, '0');
+          const endVal = `${year}-${month}-${day}T${hours}:${minutes}`;
+          
+          if (!endInput.value || new Date(endInput.value) <= startDate) {
+            endInput.value = endVal;
+          }
+        }
+      });
+    }
+
     // イベント作成処理
     document.getElementById("eventForm").addEventListener("submit", async function(e) {
       e.preventDefault();
@@ -2386,7 +2419,8 @@
       }
 
       const name = document.getElementById("eventName").value.trim();
-      const dateTime = document.getElementById("eventDateTime").value;
+      const startDateTime = document.getElementById("eventStartDateTime").value;
+      const endDateTime = document.getElementById("eventEndDateTime").value;
       const location = document.getElementById("eventLocation").value.trim();
       const organizer = document.getElementById("eventOrganizer").value.trim() || currentUserProfile.nickname;
       const joinMethod = document.getElementById("eventJoinMethod").value.trim();
@@ -2398,8 +2432,14 @@
       const btnText = document.getElementById("eventBtnText");
       const responseMessage = document.getElementById("eventResponseMessage");
 
-      if (!name || !dateTime || !location) {
-        showResponse(responseMessage, "イベント名、日時、場所を入力してください。", "error");
+      if (!name || !startDateTime || !endDateTime || !location) {
+        showResponse(responseMessage, "イベント名、開始日時、終了日時、場所を入力してください。", "error");
+        return;
+      }
+
+      // 逆転防止バリデーション
+      if (new Date(startDateTime) >= new Date(endDateTime)) {
+        showResponse(responseMessage, "終了日時は開始日時より後の時間を指定してください。", "error");
         return;
       }
 
@@ -2407,7 +2447,10 @@
 
       const eventData = {
         name,
-        dateTime,
+        startDateTime,
+        endDateTime,
+        // 旧フィールドとの互換性のためのフォールバック
+        dateTime: startDateTime,
         location,
         organizer,
         joinMethod,
@@ -2507,8 +2550,25 @@
 
       timeline.innerHTML = "";
       allEvents.forEach(event => {
-        const dateObj = new Date(event.dateTime);
-        const formattedDate = isNaN(dateObj) ? event.dateTime : `${dateObj.getFullYear()}/${String(dateObj.getMonth()+1).padStart(2, '0')}/${String(dateObj.getDate()).padStart(2, '0')} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+        const startDateObj = new Date(event.startDateTime || event.dateTime);
+        const endDateObj = event.endDateTime ? new Date(event.endDateTime) : null;
+        
+        let formattedDate = "";
+        if (!isNaN(startDateObj)) {
+          const startStr = `${startDateObj.getFullYear()}/${String(startDateObj.getMonth()+1).padStart(2, '0')}/${String(startDateObj.getDate()).padStart(2, '0')} ${String(startDateObj.getHours()).padStart(2, '0')}:${String(startDateObj.getMinutes()).padStart(2, '0')}`;
+          
+          if (endDateObj && !isNaN(endDateObj)) {
+            const isSameDay = startDateObj.toDateString() === endDateObj.toDateString();
+            const endStr = isSameDay 
+              ? `${String(endDateObj.getHours()).padStart(2, '0')}:${String(endDateObj.getMinutes()).padStart(2, '0')}`
+              : `${endDateObj.getFullYear()}/${String(endDateObj.getMonth()+1).padStart(2, '0')}/${String(endDateObj.getDate()).padStart(2, '0')} ${String(endDateObj.getHours()).padStart(2, '0')}:${String(endDateObj.getMinutes()).padStart(2, '0')}`;
+            formattedDate = `${startStr} 〜 ${endStr}`;
+          } else {
+            formattedDate = startStr;
+          }
+        } else {
+          formattedDate = event.startDateTime || event.dateTime || "";
+        }
 
         const isUserJoined = currentUserProfile && event.participants.includes(currentUserProfile.nickname);
         const joinBtnText = isUserJoined ? "参加申込済み / Joined" : "参加を申し込む / Join Event";
