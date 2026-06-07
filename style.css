@@ -2271,3 +2271,75 @@ input[type="datetime-local"] {
   box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
+/* ==========================================
+   イベントフォームのスクロール対応・登録ボタン常時表示
+   ========================================== */
+
+/* イベント専用のフォームラッパー
+   - sticky は維持しつつ、ビューポート高さを超えた場合は内部スクロールに切り替え */
+.event-form-wrapper {
+  max-height: calc(100vh - 120px); /* ナビバー分を引いたビューポート高さ */
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  /* スクロールバーをスタイリング */
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
+}
+
+.event-form-wrapper::-webkit-scrollbar {
+  width: 4px;
+}
+
+.event-form-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.event-form-wrapper::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+/* フォーム自体はflexboxの残り領域を使い、ボタンエリアを下部に固定 */
+#eventForm {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* 登録ボタンエリア：フォームスクロール内の末尾に固定表示 */
+.event-submit-area {
+  position: sticky;
+  bottom: 0;
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 16px 0 4px;
+  margin-top: 16px;
+  border-top: 1px solid var(--card-border);
+  z-index: 20;
+}
+
+/* カレンダーピッカーが開いた時のための余白確保 */
+.event-form-wrapper #eventForm {
+  padding-bottom: 8px;
+}
+
+/* モバイル：フォームラッパーのsticky解除（通常フロー） */
+@media (max-width: 1024px) {
+  .event-form-wrapper {
+    max-height: none;
+    overflow-y: visible;
+    position: static;
+  }
+
+  .event-submit-area {
+    position: relative;
+    bottom: auto;
+    border-top: 2px solid var(--primary);
+    padding-top: 20px;
+    margin-top: 20px;
+  }
+}
+

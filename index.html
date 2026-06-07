@@ -306,7 +306,7 @@
             
             <div class="board-layout">
               <!-- 左側：イベント作成フォーム -->
-              <div class="post-form-wrapper">
+              <div class="post-form-wrapper event-form-wrapper">
                 <div id="eventEditBanner" style="display: none; justify-content: space-between; align-items: center; background: var(--secondary-glow); border: 1px solid var(--secondary); padding: 8px 12px; border-radius: var(--border-radius-sm); margin-bottom: 16px; font-size: 0.9rem; font-weight: 700; color: var(--secondary);">
                   <span>✏️ イベント編集中 / Editing Event</span>
                   <button type="button" onclick="cancelEditEventMode()" style="background: none; border: none; color: var(--error); cursor: pointer; font-weight: 700; font-size: 0.85rem; padding: 0;">キャンセル / Cancel</button>
@@ -361,11 +361,14 @@
 
                   <div id="eventResponseMessage" class="message-box" role="alert" aria-live="polite"></div>
 
-                  <p id="eventValidationHint" class="input-help-text" style="margin-top: 12px; color: var(--text-muted); text-align: center; font-size: 0.85rem;">※ イベント名・開始日時・終了日時・場所をすべて入力すると登録ボタンが有効になります。</p>
-                  <button type="submit" class="submit-btn event-register-btn" id="eventSubmitBtn" style="margin-top: 8px; font-size: 1.05rem; padding: 18px;" disabled>
-                    <span class="spinner" id="eventSpinner" style="display: none;"></span>
-                    <span id="eventBtnText">📅 イベントを登録する / Create Event</span>
-                  </button>
+                  <!-- 登録ボタンエリア（スティッキー） -->
+                  <div class="event-submit-area">
+                    <p id="eventValidationHint" class="input-help-text" style="margin-top: 0; margin-bottom: 8px; color: var(--text-muted); text-align: center; font-size: 0.85rem;">※ イベント名・開始日時・終了日時・場所をすべて入力すると登録ボタンが有効になります。</p>
+                    <button type="submit" class="submit-btn event-register-btn" id="eventSubmitBtn" disabled>
+                      <span class="spinner" id="eventSpinner" style="display: none;"></span>
+                      <span id="eventBtnText">📅 イベントを登録する / Create Event</span>
+                    </button>
+                  </div>
                 </form>
               </div>
 
