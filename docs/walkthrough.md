@@ -1,81 +1,57 @@
-# 投稿・返信処理のフリーズ解消および編集・削除機能の実装完了
+# 投稿・返信処理のフリーズ解消および編集・削除・バリデーション機能の実装完了
 
-交流スペースにおける「コメント」および主催する「イベント」の編集・削除機能の実装と、大容量ファイル投稿時等に発生していた「投稿中... / Posting...」のままフリーズするバグの解消を行いました。
+交流スペースにおける「コメント」および主催する「イベント」の編集・削除機能の実装、大容量ファイル投稿時に発生していたフリーズバグの解消に加え、**イベント作成フォームにおける日時バリデーションと登録ボタンの活性・非活性制御の連動**を行いました。
 
 ## 変更されたファイル
 
 * [index.html](../index.html):
-  - 編集・削除UIの追加とそれに伴う更新・削除API呼び出し処理の実装。
-  - 各種非同期処理（モック用の `setTimeout` コールバック）内への `try-catch-finally` による例外ハンドリングの追加。
-  - モック動作時における画像アップロード容量上限の `1MB` 制限と、LocalStorage容量制限超過時の警告表示によるフリーズ防止。
-* [style.css](../style.css): 編集・削除アクションボタンおよびインライン編集用テキストエリアのスタイリング。
-* [tests/e2e_test_edit_delete.js](../tests/e2e_test_edit_delete.js): コメントおよびイベントの編集・削除機能を検証する Puppeteer 自動テストスクリプト。
-* [tests/e2e_test_error_handling.js](../tests/e2e_test_error_handling.js): 許容量超過画像のアップロード検知時のアラート警告、およびエラー発生後のローディング解除・ボタン復旧を検証する自動テストスクリプト。
+  - イベント登録（送信）ボタンをデフォルトで `disabled` に設定し、表記テキストを指示通り「イベントを登録する / Create Event」に修正しました。
+  - 開始日時（`#eventStartDateTime`）と終了日時（`#eventEndDateTime`）が双方入力され、かつ「終了日時が開始日時より後である」という整合性が満たされたときのみボタンを活性化する `validateEventSubmitBtn` バリデーション関数を実装しました。
+  - イベントの新規作成成功時・更新完了時・編集キャンセル時などにボタンの活性・非活性状態をリセットし、新規作成・更新成功時には右側の「募集中のイベント一覧」までスムーズスクロールして反映を確認できる挙動を追加しました。
+* [style.css](../style.css): 
+  - 無効状態（`disabled`）の送信ボタンが明示的にグレーアウトされ、マウスホバーできないようスタイル規則を調整しました。
+* [tests/e2e_test_events.js](../tests/e2e_test_events.js): 
+  - 日時を入力した後に JavaScript 側のバリデーションが正しく動作してボタンが活性化するように、`change` イベントを明示的に発火させる（`dispatchEvent`）コードを追加しました。
+* [tests/e2e_test_edit_delete.js](../tests/e2e_test_edit_delete.js): 
+  - イベント編集・削除機能テストでも上記と同様に、日時入力後に `change` イベントを発火させるコードを追加しました。
 
 ---
 
-## 修正された不具合（通信・ローディングフリーズ）の概要
+## 修正された不具合と新規仕様
 
-### 従来の挙動と原因
-- 非同期（モックLocalStorageへの書き込みなど）処理の中で、画像容量超過等により `QuotaExceededError` が発生した際、非同期コールバック内部にエラーハンドリング（`try-catch-finally`）がなかったため、処理が途中で例外終了していました。
-- これにより、送信ボタンの非活性状態を戻すローディング解除処理までコードが到達せず、「投稿中...」のスピナーが回り続けたまま画面操作がフリーズしていました。
+### 1. イベント登録ボタンの日時バリデーション連動
+* **挙動:**
+  - 初期状態および入力が不足している場合、登録ボタンは無効化（`disabled`）され、ホバーやクリックができません。
+  - 開始日時と終了日時の双方が選択され、さらに「終了日時 ＞ 開始日時」である正しい時間範囲が指定された瞬間にのみ、ボタンが活性化（クリック可能）します。
+  - 入力がクリアされたり、終了日時を開始日時以前に変更した場合は、即時にボタンが再度無効化されます。
 
-### 対策
-1. 非同期モック処理のすべてを `try-catch-finally` で囲み、エラー発生時にも確実に活性状態へ復帰するようにしました。
-2. モックでの大容量画像保存によるLocalStorageパンクを防ぐため、モック利用時のファイルサイズ制限を `1MB` に引き下げました。
-3. 容量制限に達した際には、フリーズせずにユーザーに「容量が大きすぎます」というわかりやすいエラー警告を表示するハンドリングを追加しました。
-
----
-
-## 動作確認スクリーンショット（テスト経過）
-
-テスト中に記録された各フェーズの画面表示推移です。
-
-````carousel
-![コメント投稿完了](screenshots/13_post_created_timeline.png)
-<!-- slide -->
-![コメントのインライン編集・保存後](screenshots/14_post_updated_timeline.png)
-<!-- slide -->
-![コメント削除後（タイムラインから消去）](screenshots/15_post_deleted_timeline.png)
-<!-- slide -->
-![イベント新規作成完了](screenshots/16_event_created_timeline.png)
-<!-- slide -->
-![イベント名変更・更新後](screenshots/17_event_updated_timeline.png)
-<!-- slide -->
-![イベント削除後（イベント一覧から消去）](screenshots/18_event_deleted_timeline.png)
-<!-- slide -->
-![大容量画像アップロード警告発生後（入力クリア）](screenshots/19_large_image_alert_triggered.png)
-<!-- slide -->
-![エラー回避後のテキスト投稿成功](screenshots/20_error_handling_post_success.png)
-````
+### 2. 登録成功後の挙動・自動スクロール遷移
+* **挙動:**
+  - イベントの登録（モックLocalStorageまたはFirestore）が成功すると、「イベントを作成しました！」等の緑色の成功トースト通知が表示されます。
+  - それと同時に、フォームが自動リセットされ、画面が右側の「募集中のイベント一覧」位置までスムーズにスクロールし、最新 of 登録内容が一覧の一番上に反映されたことをすぐに視認できるようになります。
 
 ---
 
 ## テスト実行結果
 
-### 1. エラーハンドリング・容量制限テスト (`e2e_test_error_handling.js`)
-巨大なダミーデータ（1.5MB）を用いて、警告ダイアログの検知、およびエラー発生後でもフリーズせずにボタンが即座に復帰し、次の投稿（テキストのみ等）を正しく完了できることを検証しました。
+E2Eテストがすべて正常に動作し、バリデーション連動後も自動テストが100%成功することを確認しました。
 
+### 1. イベント作成フローテスト (`e2e_test_events.js`)
 ```
-Generated a 1.5MB dummy file at: C:\Users\user\.antigravity-ide\tests\dummy_large_image.png
 Navigating to target page...
-Logging in...
-Uploading a 1.5MB file to trigger mock limit alert...
-[ALERT DETECTED] message: "画像サイズは1MB以下にしてください。(Image size must be 1MB or less)"
-Screenshot 19 saved.
-Mock size limit alert correctly triggered!
-Posting text message to verify standard posting & button restoration...
-Waiting for posting response message...
-Screenshot 20 saved.
-Submit button correctly re-enabled and spinner hidden!
-Timeline successfully updated!
-Dummy file cleaned up.
-E2E error handling test run finished successfully!
+Logging in with demo credentials...
+Switching to Events Tab...
+Screenshot 10 saved.
+Filling in event creation form...
+Submitting event form...
+Screenshot 11 saved.
+Created Event Title: 📅 第1回 卓球交流大会 (Spring Ping-Pong Meet)
+Opening Terms & Disclaimer accordion in the event card...
+Screenshot 12 saved.
+E2E event test run finished successfully.
 ```
 
-### 2. 編集・削除機能テスト (`e2e_test_edit_delete.js`)
-自分が作成したコンテンツのみに「編集」「削除」ボタンが表示され、インライン編集および削除がタイムラインやイベント一覧に正しく同期されることを検証しました。
-
+### 2. 編集・削除機能およびバリデーション連動テスト (`e2e_test_edit_delete.js`)
 ```
 Navigating to target page...
 Logging in with demo credentials...
@@ -83,14 +59,7 @@ Creating a new post...
 Verifying post creation...
 Screenshot 13 saved.
 Checking edit and delete buttons on the post...
-Clicking edit button...
-Updating post content...
-Post content successfully updated!
-Screenshot 14 saved.
-Deleting the post...
-Dialog message: このコメントを削除してもよろしいですか？
-Post successfully deleted!
-Screenshot 15 saved.
+...
 Switching to Events Tab...
 Creating a new event...
 Screenshot 16 saved.

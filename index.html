@@ -361,9 +361,9 @@
 
                   <div id="eventResponseMessage" class="message-box" role="alert" aria-live="polite"></div>
 
-                  <button type="submit" class="submit-btn" id="eventSubmitBtn" style="margin-top: 12px;">
+                  <button type="submit" class="submit-btn" id="eventSubmitBtn" style="margin-top: 12px;" disabled>
                     <span class="spinner" id="eventSpinner" style="display: none;"></span>
-                    <span id="eventBtnText">イベントを作成する / Create Event</span>
+                    <span id="eventBtnText">イベントを登録する / Create Event</span>
                   </button>
                 </form>
               </div>
@@ -2387,10 +2387,32 @@
       }
     }
 
-    // 開始日時が変更された際に終了日時を自動設定（1時間後）し、min属性を設定する
+    // 開始日時・終了日時のバリデーションと登録ボタンの制御
     const startInput = document.getElementById("eventStartDateTime");
     const endInput = document.getElementById("eventEndDateTime");
+    const eventSubmitBtn = document.getElementById("eventSubmitBtn");
+
+    function validateEventSubmitBtn() {
+      if (!startInput || !endInput || !eventSubmitBtn) return;
+      
+      const startVal = startInput.value;
+      const endVal = endInput.value;
+      
+      // 両方が入力されており、かつ終了日時が開始日時より後の場合のみ活性化
+      if (startVal && endVal && new Date(endVal) > new Date(startVal)) {
+        eventSubmitBtn.disabled = false;
+      } else {
+        eventSubmitBtn.disabled = true;
+      }
+    }
+
     if (startInput && endInput) {
+      startInput.addEventListener("input", validateEventSubmitBtn);
+      startInput.addEventListener("change", validateEventSubmitBtn);
+      endInput.addEventListener("input", validateEventSubmitBtn);
+      endInput.addEventListener("change", validateEventSubmitBtn);
+      
+      // 開始日時が変更された際に終了日時を自動設定（1時間後）し、min属性を設定する
       startInput.addEventListener("change", function() {
         const startVal = this.value;
         if (startVal) {
@@ -2410,9 +2432,13 @@
           if (!endInput.value || new Date(endInput.value) <= startDate) {
             endInput.value = endVal;
           }
+          
+          // 自動設定後にバリデーションを呼び出す
+          validateEventSubmitBtn();
         }
       });
     }
+
 
     // イベント編集状態の保持と補助関数
     let editingEventId = null;
@@ -2426,13 +2452,16 @@
       if (editBanner) editBanner.style.display = "none";
       
       const submitBtnText = document.getElementById("eventBtnText");
-      if (submitBtnText) submitBtnText.textContent = "イベントを作成する / Create Event";
+      if (submitBtnText) submitBtnText.textContent = "イベントを登録する / Create Event";
       
       // 主催者のデフォルト設定を戻す
       if (currentUserProfile) {
         document.getElementById("eventUserNickname").textContent = currentUserProfile.nickname;
         document.getElementById("eventOrganizer").value = currentUserProfile.nickname;
       }
+
+      // バリデーション状態の更新
+      validateEventSubmitBtn();
     };
 
     // イベント作成・編集処理
@@ -2505,11 +2534,18 @@
               showResponse(responseMessage, "イベントを更新しました！", "success");
               cancelEditEventMode();
               loadMockEvents();
+              
+              // タイムラインへスクロール
+              const timeline = document.getElementById("eventTimeline");
+              if (timeline) {
+                timeline.scrollIntoView({ behavior: "smooth" });
+              }
             } catch (error) {
               console.error("Mock event update error:", error);
               showResponse(responseMessage, "イベントの更新中にエラーが発生しました。(デモ用)", "error");
             } finally {
-              setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+              setLoadingState(submitBtn, spinner, btnText, false, "イベントを登録する / Create Event");
+              validateEventSubmitBtn();
             }
           }, 1000);
         } else {
@@ -2519,11 +2555,20 @@
             
             showResponse(responseMessage, "イベントを更新しました！", "success");
             cancelEditEventMode();
-            setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+            
+            // タイムラインへスクロール
+            const timeline = document.getElementById("eventTimeline");
+            if (timeline) {
+              timeline.scrollIntoView({ behavior: "smooth" });
+            }
+            
+            setLoadingState(submitBtn, spinner, btnText, false, "イベントを登録する / Create Event");
+            validateEventSubmitBtn();
           } catch (error) {
             console.error("Error updating event:", error);
             showResponse(responseMessage, "イベントの更新に失敗しました。", "error");
             setLoadingState(submitBtn, spinner, btnText, false, "イベントを更新する / Update Event");
+            validateEventSubmitBtn();
           }
         }
       } else {
@@ -2563,11 +2608,18 @@
               document.getElementById("eventForm").reset();
               initEventTermsTemplate();
               loadMockEvents();
+              
+              // タイムラインへスクロール
+              const timeline = document.getElementById("eventTimeline");
+              if (timeline) {
+                timeline.scrollIntoView({ behavior: "smooth" });
+              }
             } catch (error) {
               console.error("Mock event create error:", error);
               showResponse(responseMessage, "イベントの作成中にエラーが発生しました。(デモ用)", "error");
             } finally {
-              setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+              setLoadingState(submitBtn, spinner, btnText, false, "イベントを登録する / Create Event");
+              validateEventSubmitBtn();
             }
           }, 1000);
         } else {
@@ -2580,11 +2632,20 @@
             showResponse(responseMessage, "イベントを作成しました！", "success");
             document.getElementById("eventForm").reset();
             initEventTermsTemplate();
-            setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+            
+            // タイムラインへスクロール
+            const timeline = document.getElementById("eventTimeline");
+            if (timeline) {
+              timeline.scrollIntoView({ behavior: "smooth" });
+            }
+            
+            setLoadingState(submitBtn, spinner, btnText, false, "イベントを登録する / Create Event");
+            validateEventSubmitBtn();
           } catch (error) {
             console.error("Error creating event:", error);
             showResponse(responseMessage, "イベントの作成に失敗しました。", "error");
-            setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+            setLoadingState(submitBtn, spinner, btnText, false, "イベントを登録する / Create Event");
+            validateEventSubmitBtn();
           }
         }
       }
@@ -3502,6 +3563,9 @@
       // 送信ボタンのテキスト変更
       const submitBtnText = document.getElementById("eventBtnText");
       if (submitBtnText) submitBtnText.textContent = "イベントを更新する / Update Event";
+      
+      // バリデーションのチェック
+      validateEventSubmitBtn();
       
       // フォームまでスクロール
       const formWrapper = document.getElementById("eventForm").closest(".post-form-wrapper");

@@ -179,8 +179,12 @@ async function run() {
   console.log("Creating a new event...");
   await page.type('#eventName', '第2回 編集テスト卓球大会');
   await page.evaluate(() => {
-    document.getElementById('eventStartDateTime').value = '2026-06-20T14:00';
-    document.getElementById('eventEndDateTime').value = '2026-06-20T16:00';
+    const start = document.getElementById('eventStartDateTime');
+    const end = document.getElementById('eventEndDateTime');
+    start.value = '2026-06-20T14:00';
+    end.value = '2026-06-20T16:00';
+    start.dispatchEvent(new Event('change'));
+    end.dispatchEvent(new Event('change'));
   });
   await page.type('#eventLocation', 'サブ体育館');
   await page.type('#eventDescription', 'イベント編集と削除のテスト用。');
