@@ -2490,15 +2490,27 @@
 
         if (isMockMode) {
           setTimeout(() => {
-            let mockEvents = JSON.parse(localStorage.getItem("mock_events") || "[]");
-            mockEvents = mockEvents.map(ev => ev.id === editingEventId ? updatedEventData : ev);
-            localStorage.setItem("mock_events", JSON.stringify(mockEvents));
-            
-            showResponse(responseMessage, "イベントを更新しました！", "success");
-            cancelEditEventMode();
-            setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
-            
-            loadMockEvents();
+            try {
+              let mockEvents = JSON.parse(localStorage.getItem("mock_events") || "[]");
+              mockEvents = mockEvents.map(ev => ev.id === editingEventId ? updatedEventData : ev);
+              try {
+                localStorage.setItem("mock_events", JSON.stringify(mockEvents));
+              } catch (storageErr) {
+                if (storageErr.name === 'QuotaExceededError' || storageErr.code === 22) {
+                  showResponse(responseMessage, "データの容量制限によりイベントを更新できませんでした。", "error");
+                  return;
+                }
+                throw storageErr;
+              }
+              showResponse(responseMessage, "イベントを更新しました！", "success");
+              cancelEditEventMode();
+              loadMockEvents();
+            } catch (error) {
+              console.error("Mock event update error:", error);
+              showResponse(responseMessage, "イベントの更新中にエラーが発生しました。(デモ用)", "error");
+            } finally {
+              setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+            }
           }, 1000);
         } else {
           try {
@@ -2533,17 +2545,30 @@
 
         if (isMockMode) {
           setTimeout(() => {
-            const mockEvents = JSON.parse(localStorage.getItem("mock_events") || "[]");
-            eventData.id = "event-" + Date.now();
-            mockEvents.unshift(eventData);
-            localStorage.setItem("mock_events", JSON.stringify(mockEvents));
-            
-            showResponse(responseMessage, "イベントを作成しました！", "success");
-            document.getElementById("eventForm").reset();
-            initEventTermsTemplate();
-            setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
-            
-            loadMockEvents();
+            try {
+              const mockEvents = JSON.parse(localStorage.getItem("mock_events") || "[]");
+              eventData.id = "event-" + Date.now();
+              mockEvents.unshift(eventData);
+              try {
+                localStorage.setItem("mock_events", JSON.stringify(mockEvents));
+              } catch (storageErr) {
+                if (storageErr.name === 'QuotaExceededError' || storageErr.code === 22) {
+                  showResponse(responseMessage, "データの容量制限によりイベントを作成できませんでした。", "error");
+                  return;
+                }
+                throw storageErr;
+              }
+              
+              showResponse(responseMessage, "イベントを作成しました！", "success");
+              document.getElementById("eventForm").reset();
+              initEventTermsTemplate();
+              loadMockEvents();
+            } catch (error) {
+              console.error("Mock event create error:", error);
+              showResponse(responseMessage, "イベントの作成中にエラーが発生しました。(デモ用)", "error");
+            } finally {
+              setLoadingState(submitBtn, spinner, btnText, false, "イベントを作成する / Create Event");
+            }
           }, 1000);
         } else {
           try {
@@ -2766,31 +2791,44 @@
 
       if (isMockMode) {
         setTimeout(() => {
-          const mockPosts = JSON.parse(localStorage.getItem("mock_posts") || "[]");
-          const newPost = {
-            id: "post-" + Date.now(),
-            uid: currentUserProfile.uid,
-            nickname: currentUserProfile.nickname,
-            category: categoryInput.value.trim(),
-            comment: commentInput.value.trim(),
-            imageUrl: selectedBase64Image || "", 
-            likes: 0,
-            likedBy: [],
-            timestamp: new Date().toISOString(),
-            parentId: null
-          };
+          try {
+            const mockPosts = JSON.parse(localStorage.getItem("mock_posts") || "[]");
+            const newPost = {
+              id: "post-" + Date.now(),
+              uid: currentUserProfile.uid,
+              nickname: currentUserProfile.nickname,
+              category: categoryInput.value.trim(),
+              comment: commentInput.value.trim(),
+              imageUrl: selectedBase64Image || "", 
+              likes: 0,
+              likedBy: [],
+              timestamp: new Date().toISOString(),
+              parentId: null
+            };
 
-          mockPosts.unshift(newPost);
-          localStorage.setItem("mock_posts", JSON.stringify(mockPosts));
-          loadMockMessages();
-          
-          showResponse(responseMessage, "投稿が完了しました！", "success");
-          document.getElementById('boardForm').reset();
-          removeSelectedImage();
-          
-          submitBtn.disabled = false;
-          btnText.textContent = "投稿する / Post Message";
-          btnSpinner.style.display = "none";
+            mockPosts.unshift(newPost);
+            try {
+              localStorage.setItem("mock_posts", JSON.stringify(mockPosts));
+            } catch (storageErr) {
+              if (storageErr.name === 'QuotaExceededError' || storageErr.code === 22) {
+                showResponse(responseMessage, "画像のデータ容量が大きすぎるため保存できませんでした。他の画像を選択するか、テキストのみで投稿してください。(Demo limit exceeded)", "error");
+                return;
+              }
+              throw storageErr;
+            }
+            loadMockMessages();
+            
+            showResponse(responseMessage, "投稿が完了しました！", "success");
+            document.getElementById('boardForm').reset();
+            removeSelectedImage();
+          } catch (error) {
+            console.error("Mock post error:", error);
+            showResponse(responseMessage, "投稿エラーが発生しました。(デモ用)", "error");
+          } finally {
+            submitBtn.disabled = false;
+            btnText.textContent = "投稿する / Post Message";
+            btnSpinner.style.display = "none";
+          }
         }, 800);
       } else {
         try {
@@ -2854,27 +2892,40 @@
 
       if (isMockMode) {
         setTimeout(() => {
-          const mockPosts = JSON.parse(localStorage.getItem("mock_posts") || "[]");
-          const newReply = {
-            id: "reply-" + Date.now(),
-            uid: currentUserProfile.uid,
-            nickname: currentUserProfile.nickname,
-            comment: commentInput.value.trim(),
-            likes: 0,
-            likedBy: [],
-            timestamp: new Date().toISOString(),
-            parentId: parentId
-          };
+          try {
+            const mockPosts = JSON.parse(localStorage.getItem("mock_posts") || "[]");
+            const newReply = {
+              id: "reply-" + Date.now(),
+              uid: currentUserProfile.uid,
+              nickname: currentUserProfile.nickname,
+              comment: commentInput.value.trim(),
+              likes: 0,
+              likedBy: [],
+              timestamp: new Date().toISOString(),
+              parentId: parentId
+            };
 
-          mockPosts.push(newReply);
-          localStorage.setItem("mock_posts", JSON.stringify(mockPosts));
-          loadMockMessages();
+            mockPosts.push(newReply);
+            try {
+              localStorage.setItem("mock_posts", JSON.stringify(mockPosts));
+            } catch (storageErr) {
+              if (storageErr.name === 'QuotaExceededError' || storageErr.code === 22) {
+                alert("データの容量制限により返信を保存できませんでした。");
+                return;
+              }
+              throw storageErr;
+            }
+            loadMockMessages();
 
-          document.getElementById(`replyForm-${parentId}`).style.display = "none";
-          form.reset();
-
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = originalBtnText;
+            document.getElementById(`replyForm-${parentId}`).style.display = "none";
+            form.reset();
+          } catch (error) {
+            console.error("Mock reply error:", error);
+            alert("返信の送信中にエラーが発生しました。");
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+          }
         }, 600);
       } else {
         try {
@@ -3055,8 +3106,10 @@
           return;
         }
 
-        if (file.size > 5 * 1024 * 1024) {
-          alert("画像サイズは5MB以下にしてください。");
+        const maxSize = isMockMode ? 1 * 1024 * 1024 : 5 * 1024 * 1024;
+        const maxSizeText = isMockMode ? "1MB" : "5MB";
+        if (file.size > maxSize) {
+          alert(`画像サイズは${maxSizeText}以下にしてください。(Image size must be ${maxSizeText} or less)`);
           photoInput.value = "";
           return;
         }

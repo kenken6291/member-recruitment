@@ -1,41 +1,35 @@
-# コメントおよびイベントの編集・削除機能の実装完了
+# 投稿・返信処理のフリーズ解消および編集・削除機能の実装完了
 
-ユーザーが自分が投稿した「コメント」および主催する「イベント」を、後から編集（修正）および削除できる機能を実装しました。
-本機能は本番環境（Firestore）およびデモ環境（LocalStorage）の双方で正常に機能します。
+交流スペースにおける「コメント」および主催する「イベント」の編集・削除機能の実装と、大容量ファイル投稿時等に発生していた「投稿中... / Posting...」のままフリーズするバグの解消を行いました。
 
 ## 変更されたファイル
 
-* [index.html](../index.html): 編集・削除UI、コメントインライン編集機能、イベントプレフィル・編集モード処理、削除確認処理、Firestore/LocalStorage更新・削除処理。
+* [index.html](../index.html):
+  - 編集・削除UIの追加とそれに伴う更新・削除API呼び出し処理の実装。
+  - 各種非同期処理（モック用の `setTimeout` コールバック）内への `try-catch-finally` による例外ハンドリングの追加。
+  - モック動作時における画像アップロード容量上限の `1MB` 制限と、LocalStorage容量制限超過時の警告表示によるフリーズ防止。
 * [style.css](../style.css): 編集・削除アクションボタンおよびインライン編集用テキストエリアのスタイリング。
 * [tests/e2e_test_edit_delete.js](../tests/e2e_test_edit_delete.js): コメントおよびイベントの編集・削除機能を検証する Puppeteer 自動テストスクリプト。
+* [tests/e2e_test_error_handling.js](../tests/e2e_test_error_handling.js) [NEW]: 許容量超過画像のアップロード検知時のアラート警告、およびエラー発生後のローディング解除・ボタン復旧を検証する自動テストスクリプト。
 
 ---
 
-## 主な機能とUIの紹介
+## 修正された不具合（通信・ローディングフリーズ）の概要
 
-### 1. 権限制御
-- ログイン中のユーザーの `uid` を、投稿データおよびイベントデータの作成者 `uid` (`creatorUid`) と比較します。
-- 一致した本人のみに「✏️ 編集」「🗑️ 削除」ボタンがカードヘッダー右側に表示されます。
+### 従来の挙動と原因
+- 非同期（モックLocalStorageへの書き込みなど）処理の中で、画像容量超過等により `QuotaExceededError` が発生した際、非同期コールバック内部にエラーハンドリング（`try-catch-finally`）がなかったため、処理が途中で例外終了していました。
+- これにより、送信ボタンの非活性状態を戻すローディング解除処理までコードが到達せず、「投稿中...」のスピナーが回り続けたまま画面操作がフリーズしていました。
 
-```mermaid
-graph TD
-  A[投稿/イベントのレンダリング] --> B{ログインユーザーの UID == 作成者の UID?}
-  B -- Yes --> C[「編集」「削除」ボタンを表示]
-  B -- No --> D[ボタンを非表示]
-```
-
-### 2. コメントのインライン修正
-- 「編集」ボタンを押すと、カード内のメッセージ本文がそのまま入力テキストエリアに切り替わり、その場で直感的に内容を修正できます。
-
-### 3. 削除時の誤操作防止
-- 削除ボタンを押した際は、ブラウザ標準の確認ダイアログが表示され、誤操作を防ぎます。
-- コメントを削除すると、親コメントに関連付けられている返信（子メッセージ）も同時に一括削除されます。
+### 対策
+1. 非同期モック処理のすべてを `try-catch-finally` で囲み、エラー発生時にも確実に活性状態へ復帰するようにしました。
+2. モックでの大容量画像保存によるLocalStorageパンクを防ぐため、モック利用時のファイルサイズ制限を `1MB` に引き下げました。
+3. 容量制限に達した際には、フリーズせずにユーザーに「容量が大きすぎます」というわかりやすいエラー警告を表示するハンドリングを追加しました。
 
 ---
 
 ## 動作確認スクリーンショット（テスト経過）
 
-テスト中に記録された各フェーズの画面表示推移です。
+編集・削除機能テストで記録された各フェーズの画面表示推移です。
 
 ````carousel
 ![コメント投稿完了](screenshots/13_post_created_timeline.png)
@@ -55,7 +49,26 @@ graph TD
 
 ## テスト実行結果
 
-作成したE2Eテストを実行し、すべてのケースが期待通りに動作して無事成功したことを確認しました。
+### 1. エラーハンドリング・容量制限テスト (`e2e_test_error_handling.js`)
+巨大なダミーデータ（1.5MB）を用いて、警告ダイアログの検知、およびエラー発生後でもフリーズせずにボタンが即座に復帰し、次の投稿（テキストのみ等）を正しく完了できることを検証しました。
+
+```
+Generated a 1.5MB dummy file at: C:\Users\user\.antigravity-ide\tests\dummy_large_image.png
+Navigating to target page...
+Logging in...
+Uploading a 1.5MB file to trigger mock limit alert...
+[ALERT DETECTED] message: "画像サイズは1MB以下にしてください。(Image size must be 1MB or less)"
+Mock size limit alert correctly triggered!
+Posting text message to verify standard posting & button restoration...
+Waiting for posting response message...
+Submit button correctly re-enabled and spinner hidden!
+Timeline successfully updated!
+Dummy file cleaned up.
+E2E error handling test run finished successfully!
+```
+
+### 2. 編集・削除機能テスト (`e2e_test_edit_delete.js`)
+自分が作成したコンテンツのみに「編集」「削除」ボタンが表示され、インライン編集および削除がタイムラインやイベント一覧に正しく同期されることを検証しました。
 
 ```
 Navigating to target page...

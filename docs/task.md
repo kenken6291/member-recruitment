@@ -1,5 +1,4 @@
-- [x] `index.html` コメント（投稿・返信）の編集・削除機能実装
-- [x] `index.html` イベントの編集・削除機能実装
-- [x] `style.css` 編集・削除ボタンとインライン編集フォームのスタイリング
+- [x] `index.html` `boardForm` / `submitReply` / `eventForm` モック処理への `try-catch-finally` 追加
+- [x] `index.html` 画像サイズ制限のモック時引き下げ、および容量エラーハンドリング実装
 - [x] 自動テストの作成・実行による検証
-- [x] `walkthrough.md` の作成、およびGitHubへのコミット・プッシュ
+- [x] `docs/walkthrough.md` への反映、およびGitHubへのコミット・プッシュ
