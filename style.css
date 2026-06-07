@@ -2002,4 +2002,72 @@ footer {
   margin-top: 4px;
 }
 
+/* ==========================================
+   プロフィール設定モーダルスタイル
+   ========================================== */
+.auth-user-badge {
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  border: 1px solid transparent;
+}
+
+.auth-user-badge:hover {
+  background: var(--primary) !important;
+  color: var(--white) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--primary-glow);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.auth-user-badge:active {
+  transform: translateY(0);
+}
+
+/* モーダルのスクロール対応（スマホなど縦長化への対応） */
+.profile-dialog-card {
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* スクロールバーのカスタマイズ (Obsidian風に薄く) */
+.profile-dialog-card::-webkit-scrollbar {
+  width: 6px;
+}
+.profile-dialog-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+.profile-dialog-card::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+.profile-dialog-card::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.reauth-field {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.profile-modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+@media (max-width: 480px) {
+  .profile-dialog-card {
+    padding: 20px 16px;
+    width: 95%;
+    max-height: 90vh;
+  }
+  .profile-modal-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
 
