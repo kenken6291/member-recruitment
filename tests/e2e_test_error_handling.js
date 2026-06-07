@@ -80,7 +80,11 @@ async function run() {
   console.log("Uploading a 1.5MB file to trigger mock limit alert...");
   const fileInput = await page.$('#photoInput');
   await fileInput.uploadFile(dummyFilePath);
-  await sleep(1000);
+  await sleep(1500);
+
+  // Take screenshot of warning state (after alert dismissed, input is cleared)
+  await page.screenshot({ path: `${ARTIFACT_DIR}/19_large_image_alert_triggered.png` });
+  console.log("Screenshot 19 saved.");
 
   if (!dialogMessage.includes('1MB以下')) {
     throw new Error(`Expected alert for 1MB limit. Actual message was: "${dialogMessage}"`);
@@ -103,7 +107,11 @@ async function run() {
   
   // Wait for submission text
   console.log("Waiting for posting response message...");
-  await sleep(1500);
+  await sleep(2000);
+
+  // Take screenshot of successful post
+  await page.screenshot({ path: `${ARTIFACT_DIR}/20_error_handling_post_success.png` });
+  console.log("Screenshot 20 saved.");
 
   // Check if response box has "投稿が完了しました！"
   const responseBoxText = await page.$eval('#boardResponseMessage', el => el.textContent);

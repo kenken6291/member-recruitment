@@ -10,7 +10,7 @@
   - モック動作時における画像アップロード容量上限の `1MB` 制限と、LocalStorage容量制限超過時の警告表示によるフリーズ防止。
 * [style.css](../style.css): 編集・削除アクションボタンおよびインライン編集用テキストエリアのスタイリング。
 * [tests/e2e_test_edit_delete.js](../tests/e2e_test_edit_delete.js): コメントおよびイベントの編集・削除機能を検証する Puppeteer 自動テストスクリプト。
-* [tests/e2e_test_error_handling.js](../tests/e2e_test_error_handling.js) [NEW]: 許容量超過画像のアップロード検知時のアラート警告、およびエラー発生後のローディング解除・ボタン復旧を検証する自動テストスクリプト。
+* [tests/e2e_test_error_handling.js](../tests/e2e_test_error_handling.js): 許容量超過画像のアップロード検知時のアラート警告、およびエラー発生後のローディング解除・ボタン復旧を検証する自動テストスクリプト。
 
 ---
 
@@ -29,7 +29,7 @@
 
 ## 動作確認スクリーンショット（テスト経過）
 
-編集・削除機能テストで記録された各フェーズの画面表示推移です。
+テスト中に記録された各フェーズの画面表示推移です。
 
 ````carousel
 ![コメント投稿完了](screenshots/13_post_created_timeline.png)
@@ -43,6 +43,10 @@
 ![イベント名変更・更新後](screenshots/17_event_updated_timeline.png)
 <!-- slide -->
 ![イベント削除後（イベント一覧から消去）](screenshots/18_event_deleted_timeline.png)
+<!-- slide -->
+![大容量画像アップロード警告発生後（入力クリア）](screenshots/19_large_image_alert_triggered.png)
+<!-- slide -->
+![エラー回避後のテキスト投稿成功](screenshots/20_error_handling_post_success.png)
 ````
 
 ---
@@ -58,9 +62,11 @@ Navigating to target page...
 Logging in...
 Uploading a 1.5MB file to trigger mock limit alert...
 [ALERT DETECTED] message: "画像サイズは1MB以下にしてください。(Image size must be 1MB or less)"
+Screenshot 19 saved.
 Mock size limit alert correctly triggered!
 Posting text message to verify standard posting & button restoration...
 Waiting for posting response message...
+Screenshot 20 saved.
 Submit button correctly re-enabled and spinner hidden!
 Timeline successfully updated!
 Dummy file cleaned up.
