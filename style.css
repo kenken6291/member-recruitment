@@ -2096,7 +2096,7 @@ footer {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.4); /* デフォルトは少し薄い色 */
+  color: rgba(0, 0, 0, 0.4); /* 白い入力フィールド背景に適したダークグレーに設定 */
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.2s ease;
@@ -2104,29 +2104,13 @@ footer {
 }
 
 .password-toggle-btn:hover {
-  color: rgba(255, 255, 255, 0.85); /* ホバー時に明るく */
-  background: rgba(255, 255, 255, 0.05);
+  color: rgba(0, 0, 0, 0.85); /* ホバー時に濃く表示 */
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .password-toggle-btn:focus-visible {
   outline: 2px solid var(--primary); /* アクセシビリティ：フォーカス時の枠線 */
   color: var(--primary);
-}
-
-/* ライトテーマ対応 */
-#loginCard .password-toggle-btn {
-  color: rgba(0, 0, 0, 0.4);
-}
-#loginCard .password-toggle-btn:hover {
-  color: rgba(0, 0, 0, 0.85);
-  background: rgba(0, 0, 0, 0.05);
-}
-#signupCard .password-toggle-btn {
-  color: rgba(0, 0, 0, 0.4);
-}
-#signupCard .password-toggle-btn:hover {
-  color: rgba(0, 0, 0, 0.85);
-  background: rgba(0, 0, 0, 0.05);
 }
 
 
